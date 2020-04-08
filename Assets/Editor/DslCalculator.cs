@@ -4131,20 +4131,20 @@ namespace DslExpression
                 baseDir = Environment.ExpandEnvironmentVariables(baseDir);
                 IList<string> filterList = new string[] { "*" };
                 if (operands.Count >= 2) {
-                    var strList = operands[1] as IList<string>;
-                    if (null != strList && operands.Count == 2) {
-                        filterList = strList;
-                    }
-                    else {
-                        var list = new List<string>();
-                        for (int i = 1; i < operands.Count; ++i) {
-                            var str = operands[i] as string;
-                            if (null != str) {
-                                list.Add(str);
+                    var list = new List<string>();
+                    for (int i = 1; i < operands.Count; ++i) {
+                        var str = operands[i] as string;
+                        if (null != str) {
+                            list.Add(str);
+                        }
+                        else {
+                            var strList = operands[i] as IList<string>;
+                            if (null != strList) {
+                                list.AddRange(strList);
                             }
                         }
-                        filterList = list;
                     }
+                    filterList = list;
                 }
                 if (null != baseDir && Directory.Exists(baseDir)) {
                     var fullList = new List<string>();
@@ -4168,20 +4168,20 @@ namespace DslExpression
                 baseDir = Environment.ExpandEnvironmentVariables(baseDir);
                 IList<string> filterList = new string[] { "*" };
                 if (operands.Count >= 2) {
-                    var strList = operands[1] as IList<string>;
-                    if (null != strList && operands.Count == 2) {
-                        filterList = strList;
-                    }
-                    else {
-                        var list = new List<string>();
-                        for (int i = 1; i < operands.Count; ++i) {
-                            var str = operands[i] as string;
-                            if (null != str) {
-                                list.Add(str);
+                    var list = new List<string>();
+                    for (int i = 1; i < operands.Count; ++i) {
+                        var str = operands[i] as string;
+                        if (null != str) {
+                            list.Add(str);
+                        }
+                        else {
+                            var strList = operands[i] as IList<string>;
+                            if (null != strList) {
+                                list.AddRange(strList);
                             }
                         }
-                        filterList = list;
                     }
+                    filterList = list;
                 }
                 if (null != baseDir && Directory.Exists(baseDir)) {
                     var fullList = new List<string>();
@@ -4205,20 +4205,20 @@ namespace DslExpression
                 baseDir = Environment.ExpandEnvironmentVariables(baseDir);
                 IList<string> filterList = new string[] { "*" };
                 if (operands.Count >= 2) {
-                    var strList = operands[1] as IList<string>;
-                    if (null != strList && operands.Count == 2) {
-                        filterList = strList;
-                    }
-                    else {
-                        var list = new List<string>();
-                        for (int i = 1; i < operands.Count; ++i) {
-                            var str = operands[i] as string;
-                            if (null != str) {
-                                list.Add(str);
+                    var list = new List<string>();
+                    for (int i = 1; i < operands.Count; ++i) {
+                        var str = operands[i] as string;
+                        if (null != str) {
+                            list.Add(str);
+                        }
+                        else {
+                            var strList = operands[i] as IList<string>;
+                            if (null != strList) {
+                                list.AddRange(strList);
                             }
                         }
-                        filterList = list;
                     }
+                    filterList = list;
                 }
                 if (null != baseDir && Directory.Exists(baseDir)) {
                     var fullList = new List<string>();
@@ -4242,20 +4242,20 @@ namespace DslExpression
                 baseDir = Environment.ExpandEnvironmentVariables(baseDir);
                 IList<string> filterList = new string[] { "*" };
                 if (operands.Count >= 2) {
-                    var strList = operands[1] as IList<string>;
-                    if (null != strList && operands.Count == 2) {
-                        filterList = strList;
-                    }
-                    else {
-                        var list = new List<string>();
-                        for (int i = 1; i < operands.Count; ++i) {
-                            var str = operands[i] as string;
-                            if (null != str) {
-                                list.Add(str);
+                    var list = new List<string>();
+                    for (int i = 1; i < operands.Count; ++i) {
+                        var str = operands[i] as string;
+                        if (null != str) {
+                            list.Add(str);
+                        }
+                        else {
+                            var strList = operands[i] as IList<string>;
+                            if (null != strList) {
+                                list.AddRange(strList);
                             }
                         }
-                        filterList = list;
                     }
+                    filterList = list;
                 }
                 if (null != baseDir && Directory.Exists(baseDir)) {
                     var fullList = new List<string>();
@@ -4280,6 +4280,7 @@ namespace DslExpression
                 if (!Directory.Exists(dir)) {
                     Directory.CreateDirectory(dir);
                     ret = true;
+                    Debug.LogFormat("create directory {0}", dir);
                 }
             }
             return ret;
@@ -4300,6 +4301,12 @@ namespace DslExpression
                     var str = operands[i] as string;
                     if (null != str) {
                         filterAndNewExts.Add(str);
+                    }
+                    else {
+                        var strList = operands[i] as IList<string>;
+                        if (null != strList) {
+                            filterAndNewExts.AddRange(strList);
+                        }
                     }
                 }
                 if (filterAndNewExts.Count <= 0) {
@@ -4345,6 +4352,7 @@ namespace DslExpression
                         targetFile = Path.Combine(to, Path.ChangeExtension(Path.GetFileName(file), newExt));
                     File.Copy(file, targetFile, true);
                     ++ct;
+                    Debug.LogFormat("copy file {0} => {1}", file, targetFile);
                 }
             }
         }
@@ -4365,6 +4373,7 @@ namespace DslExpression
                     }
                     Directory.Move(dir1, dir2);
                     ret = true;
+                    Debug.LogFormat("move directory {0} => {1}", dir1, dir2);
                 }
             }
             return ret;
@@ -4381,6 +4390,7 @@ namespace DslExpression
                 if (Directory.Exists(dir)) {
                     Directory.Delete(dir, true);
                     ret = true;
+                    Debug.LogFormat("delete directory {0}", dir);
                 }
             }
             return ret;
@@ -4403,6 +4413,7 @@ namespace DslExpression
                     }
                     File.Copy(file1, file2, true);
                     ret = true;
+                    Debug.LogFormat("copy file {0} => {1}", file1, file2);
                 }
             }
             return ret;
@@ -4423,6 +4434,12 @@ namespace DslExpression
                     var str = operands[i] as string;
                     if (null != str) {
                         filterAndNewExts.Add(str);
+                    }
+                    else {
+                        var strList = operands[i] as IList<string>;
+                        if (null != strList) {
+                            filterAndNewExts.AddRange(strList);
+                        }
                     }
                 }
                 if (filterAndNewExts.Count <= 0) {
@@ -4453,6 +4470,7 @@ namespace DslExpression
                         targetFile = Path.Combine(to, Path.ChangeExtension(Path.GetFileName(file), newExt));
                     File.Copy(file, targetFile, true);
                     ++ct;
+                    Debug.LogFormat("copy file {0} => {1}", file, targetFile);
                 }
             }
         }
@@ -4477,6 +4495,7 @@ namespace DslExpression
                     }
                     File.Move(file1, file2);
                     ret = true;
+                    Debug.LogFormat("move file {0} => {1}", file1, file2);
                 }
             }
             return ret;
@@ -4493,6 +4512,7 @@ namespace DslExpression
                 if (File.Exists(file)) {
                     File.Delete(file);
                     ret = true;
+                    Debug.LogFormat("delete file {0}", file);
                 }
             }
             return ret;
@@ -4511,6 +4531,12 @@ namespace DslExpression
                     if (null != str) {
                         filters.Add(str);
                     }
+                    else {
+                        var strList = operands[i] as IList<string>;
+                        if (null != strList) {
+                            filters.AddRange(strList);
+                        }
+                    }
                 }
                 if (filters.Count <= 0) {
                     filters.Add("*");
@@ -4521,6 +4547,7 @@ namespace DslExpression
                         foreach (string file in Directory.GetFiles(dir, filter, SearchOption.TopDirectoryOnly)) {
                             File.Delete(file);
                             ++ct;
+                            Debug.LogFormat("delete file {0}", file);
                         }
                     }
                 }
@@ -4541,6 +4568,12 @@ namespace DslExpression
                     if (null != str) {
                         filters.Add(str);
                     }
+                    else {
+                        var strList = operands[i] as IList<string>;
+                        if (null != strList) {
+                            filters.AddRange(strList);
+                        }
+                    }
                 }
                 if (filters.Count <= 0) {
                     filters.Add("*");
@@ -4551,6 +4584,7 @@ namespace DslExpression
                         foreach (string file in Directory.GetFiles(dir, filter, SearchOption.AllDirectories)) {
                             File.Delete(file);
                             ++ct;
+                            Debug.LogFormat("delete file {0}", file);
                         }
                     }
                 }
