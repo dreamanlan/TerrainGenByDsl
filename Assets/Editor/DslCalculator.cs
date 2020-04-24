@@ -2565,9 +2565,13 @@ namespace DslExpression
                         list.Add(str);
                     }
                     else {
-                        var strList = operands[i] as IList<string>;
+                        var strList = operands[i] as IList;
                         if (null != strList) {
-                            list.AddRange(strList);
+                            foreach(var strObj in strList) {
+                                var tempStr = strObj as string;
+                                if (null != tempStr)
+                                    list.Add(tempStr);
+                            }
                         }
                     }
                 }
@@ -4138,9 +4142,13 @@ namespace DslExpression
                             list.Add(str);
                         }
                         else {
-                            var strList = operands[i] as IList<string>;
+                            var strList = operands[i] as IList;
                             if (null != strList) {
-                                list.AddRange(strList);
+                                foreach (var strObj in strList) {
+                                    var tempStr = strObj as string;
+                                    if (null != tempStr)
+                                        list.Add(tempStr);
+                                }
                             }
                         }
                     }
@@ -4175,9 +4183,13 @@ namespace DslExpression
                             list.Add(str);
                         }
                         else {
-                            var strList = operands[i] as IList<string>;
+                            var strList = operands[i] as IList;
                             if (null != strList) {
-                                list.AddRange(strList);
+                                foreach (var strObj in strList) {
+                                    var tempStr = strObj as string;
+                                    if (null != tempStr)
+                                        list.Add(tempStr);
+                                }
                             }
                         }
                     }
@@ -4212,9 +4224,13 @@ namespace DslExpression
                             list.Add(str);
                         }
                         else {
-                            var strList = operands[i] as IList<string>;
+                            var strList = operands[i] as IList;
                             if (null != strList) {
-                                list.AddRange(strList);
+                                foreach (var strObj in strList) {
+                                    var tempStr = strObj as string;
+                                    if (null != tempStr)
+                                        list.Add(tempStr);
+                                }
                             }
                         }
                     }
@@ -4249,9 +4265,13 @@ namespace DslExpression
                             list.Add(str);
                         }
                         else {
-                            var strList = operands[i] as IList<string>;
+                            var strList = operands[i] as IList;
                             if (null != strList) {
-                                list.AddRange(strList);
+                                foreach (var strObj in strList) {
+                                    var tempStr = strObj as string;
+                                    if (null != tempStr)
+                                        list.Add(tempStr);
+                                }
                             }
                         }
                     }
@@ -4303,9 +4323,13 @@ namespace DslExpression
                         filterAndNewExts.Add(str);
                     }
                     else {
-                        var strList = operands[i] as IList<string>;
+                        var strList = operands[i] as IList;
                         if (null != strList) {
-                            filterAndNewExts.AddRange(strList);
+                            foreach (var strObj in strList) {
+                                var tempStr = strObj as string;
+                                if (null != tempStr)
+                                    filterAndNewExts.Add(tempStr);
+                            }
                         }
                     }
                 }
@@ -4436,9 +4460,13 @@ namespace DslExpression
                         filterAndNewExts.Add(str);
                     }
                     else {
-                        var strList = operands[i] as IList<string>;
+                        var strList = operands[i] as IList;
                         if (null != strList) {
-                            filterAndNewExts.AddRange(strList);
+                            foreach (var strObj in strList) {
+                                var tempStr = strObj as string;
+                                if (null != tempStr)
+                                    filterAndNewExts.Add(tempStr);
+                            }
                         }
                     }
                 }
@@ -4532,9 +4560,13 @@ namespace DslExpression
                         filters.Add(str);
                     }
                     else {
-                        var strList = operands[i] as IList<string>;
+                        var strList = operands[i] as IList;
                         if (null != strList) {
-                            filters.AddRange(strList);
+                            foreach (var strObj in strList) {
+                                var tempStr = strObj as string;
+                                if (null != tempStr)
+                                    filters.Add(tempStr);
+                            }
                         }
                     }
                 }
@@ -4569,9 +4601,13 @@ namespace DslExpression
                         filters.Add(str);
                     }
                     else {
-                        var strList = operands[i] as IList<string>;
+                        var strList = operands[i] as IList;
                         if (null != strList) {
-                            filters.AddRange(strList);
+                            foreach (var strObj in strList) {
+                                var tempStr = strObj as string;
+                                if (null != tempStr)
+                                    filters.Add(tempStr);
+                            }
                         }
                     }
                 }
