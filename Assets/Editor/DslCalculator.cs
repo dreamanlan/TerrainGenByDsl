@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using System.IO;
+using System.Threading.Tasks;
+using System.Security.Cryptography;
 using System.Linq;
 using UnityEngine;
 #if UNITY_EDITOR
@@ -53,30 +55,30 @@ namespace DslExpression
                 return Load(valueData);
             }
             else {
-                Dsl.CallData callData = dsl as Dsl.CallData;
-                if (null != callData) {
-                    bool ret = Load(callData);
-                    if (!ret) {
-                        int num = callData.GetParamNum();
-                        List<IExpression> args = new List<IExpression>();
-                        for (int ix = 0; ix < num; ++ix) {
-                            Dsl.ISyntaxComponent param = callData.GetParam(ix);
-                            args.Add(calculator.Load(param));
+                Dsl.FunctionData funcData = dsl as Dsl.FunctionData;
+                if (null != funcData) {
+                    if (funcData.HaveParam()) {
+                        var callData = funcData;
+                        bool ret = Load(callData);
+                        if (!ret) {
+                            int num = callData.GetParamNum();
+                            List<IExpression> args = new List<IExpression>();
+                            for (int ix = 0; ix < num; ++ix) {
+                                Dsl.ISyntaxComponent param = callData.GetParam(ix);
+                                args.Add(calculator.Load(param));
+                            }
+                            return Load(args);
                         }
-                        return Load(args);
-                    }
-                    return ret;
-                }
-                else {
-                    Dsl.FunctionData funcData = dsl as Dsl.FunctionData;
-                    if (null != funcData) {
-                        return Load(funcData);
+                        return ret;
                     }
                     else {
-                        Dsl.StatementData statementData = dsl as Dsl.StatementData;
-                        if (null != statementData) {
-                            return Load(statementData);
-                        }
+                        return Load(funcData);
+                    }
+                }
+                else {
+                    Dsl.StatementData statementData = dsl as Dsl.StatementData;
+                    if (null != statementData) {
+                        return Load(statementData);
                     }
                 }
             }
@@ -87,7 +89,6 @@ namespace DslExpression
             return string.Format("{0} line:{1}", base.ToString(), m_Dsl.GetLine());
         }
         protected virtual bool Load(Dsl.ValueData valData) { return false; }
-        protected virtual bool Load(Dsl.CallData callData) { return false; }
         protected virtual bool Load(IList<IExpression> exps) { return false; }
         protected virtual bool Load(Dsl.FunctionData funcData) { return false; }
         protected virtual bool Load(Dsl.StatementData statementData) { return false; }
@@ -103,22 +104,32 @@ namespace DslExpression
 
         protected static double ToDouble(object v)
         {
+            if (null == v)
+                return 0;
             return (double)Convert.ChangeType(v, typeof(double));
         }
         protected static long ToLong(object v)
         {
+            if (null == v)
+                return 0;
             return (long)Convert.ChangeType(v, typeof(long));
         }
         protected static float ToFloat(object v)
         {
+            if (null == v)
+                return 0;
             return (float)Convert.ChangeType(v, typeof(float));
         }
         protected static int ToInt(object v)
         {
+            if (null == v)
+                return 0;
             return (int)Convert.ChangeType(v, typeof(int));
         }
         protected static string ToString(object v)
         {
+            if (null == v)
+                return string.Empty;
             return v.ToString();
         }
         protected static void CastArgsForCall(Type t, string method, BindingFlags flags, params object[] args)
@@ -257,7 +268,7 @@ namespace DslExpression
             object ret = Calculator.Arguments;
             return ret;
         }
-        protected override bool Load(Dsl.CallData callData)
+        protected override bool Load(Dsl.FunctionData callData)
         {
             return true;
         }
@@ -274,7 +285,7 @@ namespace DslExpression
             }
             return ret;
         }
-        protected override bool Load(Dsl.CallData callData)
+        protected override bool Load(Dsl.FunctionData callData)
         {
             m_ArgIndex = Calculator.Load(callData.GetParam(0));
             return true;
@@ -289,7 +300,7 @@ namespace DslExpression
             object ret = Calculator.Arguments.Count;
             return ret;
         }
-        protected override bool Load(Dsl.CallData callData)
+        protected override bool Load(Dsl.FunctionData callData)
         {
             return true;
         }
@@ -312,9 +323,9 @@ namespace DslExpression
             }
             return v;
         }
-        protected override bool Load(Dsl.CallData callData)
+        protected override bool Load(Dsl.FunctionData callData)
         {
-            Dsl.CallData param1 = callData.GetParam(0) as Dsl.CallData;
+            Dsl.FunctionData param1 = callData.GetParam(0) as Dsl.FunctionData;
             Dsl.ISyntaxComponent param2 = callData.GetParam(1);
             m_VarId = Calculator.Load(param1.GetParam(0));
             m_Op = Calculator.Load(param2);
@@ -342,7 +353,7 @@ namespace DslExpression
             }
             return v;
         }
-        protected override bool Load(Dsl.CallData callData)
+        protected override bool Load(Dsl.FunctionData callData)
         {
             m_VarId = Calculator.Load(callData.GetParam(0));
             return true;
@@ -357,10 +368,13 @@ namespace DslExpression
             object v = m_Op.Calc();
             if (m_VarId.Length > 0) {
                 Calculator.SetVariable(m_VarId, v);
+                if (null != v && m_VarId[0] != '@' && m_VarId[0] != '$') {
+                    Environment.SetEnvironmentVariable(m_VarId, v.ToString());
+                }
             }
             return v;
         }
-        protected override bool Load(Dsl.CallData callData)
+        protected override bool Load(Dsl.FunctionData callData)
         {
             Dsl.ISyntaxComponent param1 = callData.GetParam(0);
             Dsl.ISyntaxComponent param2 = callData.GetParam(1);
@@ -385,6 +399,9 @@ namespace DslExpression
             }
             else if (m_VarId.Length > 0) {
                 ret = Calculator.GetVariable(m_VarId);
+                if (null == ret && m_VarId[0] != '@' && m_VarId[0] != '$') {
+                    ret = Environment.GetEnvironmentVariable(m_VarId);
+                }
             }
             return ret;
         }
@@ -1422,10 +1439,10 @@ namespace DslExpression
         {
             Dsl.FunctionData funcData1 = statementData.First;
             Dsl.FunctionData funcData2 = statementData.Second;
-            if (funcData2.GetId() == ":") {
-                Dsl.ISyntaxComponent cond = funcData1.Call.GetParam(0);
-                Dsl.ISyntaxComponent op1 = funcData1.GetStatement(0);
-                Dsl.ISyntaxComponent op2 = funcData2.GetStatement(0);
+            if (funcData1.IsHighOrder && funcData1.HaveLowerOrderParam() && funcData2.GetId() == ":" && funcData2.HaveParamOrStatement()) {
+                Dsl.ISyntaxComponent cond = funcData1.LowerOrderFunction.GetParam(0);
+                Dsl.ISyntaxComponent op1 = funcData1.GetParam(0);
+                Dsl.ISyntaxComponent op2 = funcData2.GetParam(0);
                 m_Op1 = Calculator.Load(cond);
                 m_Op2 = Calculator.Load(op1);
                 m_Op3 = Calculator.Load(op2);
@@ -1474,14 +1491,20 @@ namespace DslExpression
         }
         protected override bool Load(Dsl.FunctionData funcData)
         {
-            Dsl.ISyntaxComponent cond = funcData.Call.GetParam(0);
-            IfExp.Clause item = new IfExp.Clause();
-            item.Condition = Calculator.Load(cond);
-            for (int ix = 0; ix < funcData.GetStatementNum(); ++ix) {
-                IExpression subExp = Calculator.Load(funcData.GetStatement(ix));
-                item.Expressions.Add(subExp);
+            if (funcData.IsHighOrder) {
+                Dsl.ISyntaxComponent cond = funcData.LowerOrderFunction.GetParam(0);
+                IfExp.Clause item = new IfExp.Clause();
+                item.Condition = Calculator.Load(cond);
+                for (int ix = 0; ix < funcData.GetParamNum(); ++ix) {
+                    IExpression subExp = Calculator.Load(funcData.GetParam(ix));
+                    item.Expressions.Add(subExp);
+                }
+                m_Clauses.Add(item);
             }
-            m_Clauses.Add(item);
+            else {
+                //error
+                Debug.LogErrorFormat("DslCalculator error, {0} line {1}", funcData.ToScriptString(false), funcData.GetLine());
+            }
             return true;
         }
         protected override bool Load(Dsl.StatementData statementData)
@@ -1496,8 +1519,8 @@ namespace DslExpression
                 if (firstId == "if" && !first.HaveStatement() && !first.HaveExternScript() &&
                         !string.IsNullOrEmpty(secondId) && !second.HaveStatement() && !second.HaveExternScript()) {
                     IfExp.Clause item = new IfExp.Clause();
-                    if (first.Call.GetParamNum() > 0) {
-                        Dsl.ISyntaxComponent cond = first.Call.GetParam(0);
+                    if (first.GetParamNum() > 0) {
+                        Dsl.ISyntaxComponent cond = first.GetParam(0);
                         item.Condition = Calculator.Load(cond);
                     }
                     else {
@@ -1505,7 +1528,6 @@ namespace DslExpression
                         Debug.LogErrorFormat("DslCalculator error, {0} line {1}", first.ToScriptString(false), first.GetLine());
                     }
                     IExpression subExp = Calculator.Load(second);
-
                     item.Expressions.Add(subExp);
                     m_Clauses.Add(item);
                     return true;
@@ -1515,16 +1537,16 @@ namespace DslExpression
             foreach (var fData in statementData.Functions) {
                 if (fData.GetId() == "if" || fData.GetId() == "elseif") {
                     IfExp.Clause item = new IfExp.Clause();
-                    if (fData.Call.GetParamNum() > 0) {
-                        Dsl.ISyntaxComponent cond = fData.Call.GetParam(0);
+                    if (fData.IsHighOrder && fData.LowerOrderFunction.GetParamNum() > 0) {
+                        Dsl.ISyntaxComponent cond = fData.LowerOrderFunction.GetParam(0);
                         item.Condition = Calculator.Load(cond);
                     }
                     else {
                         //error
                         Debug.LogErrorFormat("DslCalculator error, {0} line {1}", fData.ToScriptString(false), fData.GetLine());
                     }
-                    for (int ix = 0; ix < fData.GetStatementNum(); ++ix) {
-                        IExpression subExp = Calculator.Load(fData.GetStatement(ix));
+                    for (int ix = 0; ix < fData.GetParamNum(); ++ix) {
+                        IExpression subExp = Calculator.Load(fData.GetParam(ix));
                         item.Expressions.Add(subExp);
                     }
                     m_Clauses.Add(item);
@@ -1536,8 +1558,8 @@ namespace DslExpression
                     }
                     else {
                         IfExp.Clause item = new IfExp.Clause();
-                        for (int ix = 0; ix < fData.GetStatementNum(); ++ix) {
-                            IExpression subExp = Calculator.Load(fData.GetStatement(ix));
+                        for (int ix = 0; ix < fData.GetParamNum(); ++ix) {
+                            IExpression subExp = Calculator.Load(fData.GetParam(ix));
                             item.Expressions.Add(subExp);
                         }
                         m_Clauses.Add(item);
@@ -1588,11 +1610,17 @@ namespace DslExpression
         }
         protected override bool Load(Dsl.FunctionData funcData)
         {
-            Dsl.ISyntaxComponent cond = funcData.Call.GetParam(0);
-            m_Condition = Calculator.Load(cond);
-            for (int ix = 0; ix < funcData.GetStatementNum(); ++ix) {
-                IExpression subExp = Calculator.Load(funcData.GetStatement(ix));
-                m_Expressions.Add(subExp);
+            if (funcData.IsHighOrder) {
+                Dsl.ISyntaxComponent cond = funcData.LowerOrderFunction.GetParam(0);
+                m_Condition = Calculator.Load(cond);
+                for (int ix = 0; ix < funcData.GetParamNum(); ++ix) {
+                    IExpression subExp = Calculator.Load(funcData.GetParam(ix));
+                    m_Expressions.Add(subExp);
+                }
+            }
+            else {
+                //error
+                Debug.LogErrorFormat("DslCalculator error, {0} line {1}", funcData.ToScriptString(false), funcData.GetLine());
             }
             return true;
         }
@@ -1606,8 +1634,8 @@ namespace DslExpression
                 var secondId = second.GetId();
                 if (firstId == "while" && !first.HaveStatement() && !first.HaveExternScript() &&
                         !string.IsNullOrEmpty(secondId) && !second.HaveStatement() && !second.HaveExternScript()) {
-                    if (first.Call.GetParamNum() > 0) {
-                        Dsl.ISyntaxComponent cond = first.Call.GetParam(0);
+                    if (first.GetParamNum() > 0) {
+                        Dsl.ISyntaxComponent cond = first.GetParam(0);
                         m_Condition = Calculator.Load(cond);
                     }
                     else {
@@ -1651,11 +1679,17 @@ namespace DslExpression
         }
         protected override bool Load(Dsl.FunctionData funcData)
         {
-            Dsl.ISyntaxComponent count = funcData.Call.GetParam(0);
-            m_Count = Calculator.Load(count);
-            for (int ix = 0; ix < funcData.GetStatementNum(); ++ix) {
-                IExpression subExp = Calculator.Load(funcData.GetStatement(ix));
-                m_Expressions.Add(subExp);
+            if (funcData.IsHighOrder) {
+                Dsl.ISyntaxComponent count = funcData.LowerOrderFunction.GetParam(0);
+                m_Count = Calculator.Load(count);
+                for (int ix = 0; ix < funcData.GetParamNum(); ++ix) {
+                    IExpression subExp = Calculator.Load(funcData.GetParam(ix));
+                    m_Expressions.Add(subExp);
+                }
+            }
+            else {
+                //error
+                Debug.LogErrorFormat("DslCalculator error, {0} line {1}", funcData.ToScriptString(false), funcData.GetLine());
             }
             return true;
         }
@@ -1669,8 +1703,8 @@ namespace DslExpression
                 var secondId = second.GetId();
                 if (firstId == "loop" && !first.HaveStatement() && !first.HaveExternScript() &&
                         !string.IsNullOrEmpty(secondId) && !second.HaveStatement() && !second.HaveExternScript()) {
-                    if (first.Call.GetParamNum() > 0) {
-                        Dsl.ISyntaxComponent exp = first.Call.GetParam(0);
+                    if (first.GetParamNum() > 0) {
+                        Dsl.ISyntaxComponent exp = first.GetParam(0);
                         m_Count = Calculator.Load(exp);
                     }
                     else {
@@ -1718,11 +1752,17 @@ namespace DslExpression
         }
         protected override bool Load(Dsl.FunctionData funcData)
         {
-            Dsl.ISyntaxComponent list = funcData.Call.GetParam(0);
-            m_List = Calculator.Load(list);
-            for (int ix = 0; ix < funcData.GetStatementNum(); ++ix) {
-                IExpression subExp = Calculator.Load(funcData.GetStatement(ix));
-                m_Expressions.Add(subExp);
+            if (funcData.IsHighOrder) {
+                Dsl.ISyntaxComponent list = funcData.LowerOrderFunction.GetParam(0);
+                m_List = Calculator.Load(list);
+                for (int ix = 0; ix < funcData.GetParamNum(); ++ix) {
+                    IExpression subExp = Calculator.Load(funcData.GetParam(ix));
+                    m_Expressions.Add(subExp);
+                }
+            }
+            else {
+                //error
+                Debug.LogErrorFormat("DslCalculator error, {0} line {1}", funcData.ToScriptString(false), funcData.GetLine());
             }
             return true;
         }
@@ -1736,8 +1776,8 @@ namespace DslExpression
                 var secondId = second.GetId();
                 if (firstId == "looplist" && !first.HaveStatement() && !first.HaveExternScript() &&
                         !string.IsNullOrEmpty(secondId) && !second.HaveStatement() && !second.HaveExternScript()) {
-                    if (first.Call.GetParamNum() > 0) {
-                        Dsl.ISyntaxComponent exp = first.Call.GetParam(0);
+                    if (first.GetParamNum() > 0) {
+                        Dsl.ISyntaxComponent exp = first.GetParam(0);
                         m_List = Calculator.Load(exp);
                     }
                     else {
@@ -1786,16 +1826,20 @@ namespace DslExpression
         }
         protected override bool Load(Dsl.FunctionData funcData)
         {
-            Dsl.CallData callData = funcData.Call;
-            int num = callData.GetParamNum();
-            for (int ix = 0; ix < num; ++ix) {
-                Dsl.ISyntaxComponent exp = funcData.Call.GetParam(ix);
-                m_Elements.Add(Calculator.Load(exp));
+            if (funcData.IsHighOrder) {
+                Dsl.FunctionData callData = funcData.LowerOrderFunction;
+                int num = callData.GetParamNum();
+                for (int ix = 0; ix < num; ++ix) {
+                    Dsl.ISyntaxComponent exp = callData.GetParam(ix);
+                    m_Elements.Add(Calculator.Load(exp));
+                }
             }
-            int fnum = funcData.GetStatementNum();
-            for (int ix = 0; ix < fnum; ++ix) {
-                IExpression subExp = Calculator.Load(funcData.GetStatement(ix));
-                m_Expressions.Add(subExp);
+            if (funcData.HaveStatement()) {
+                int fnum = funcData.GetParamNum();
+                for (int ix = 0; ix < fnum; ++ix) {
+                    IExpression subExp = Calculator.Load(funcData.GetParam(ix));
+                    m_Expressions.Add(subExp);
+                }
             }
             return true;
         }
@@ -1809,10 +1853,10 @@ namespace DslExpression
                 var secondId = second.GetId();
                 if (firstId == "foreach" && !first.HaveStatement() && !first.HaveExternScript() &&
                         !string.IsNullOrEmpty(secondId) && !second.HaveStatement() && !second.HaveExternScript()) {
-                    int num = first.Call.GetParamNum();
+                    int num = first.GetParamNum();
                     if (num > 0) {
                         for (int ix = 0; ix < num; ++ix) {
-                            Dsl.ISyntaxComponent exp = first.Call.GetParam(ix);
+                            Dsl.ISyntaxComponent exp = first.GetParam(ix);
                             m_Elements.Add(Calculator.Load(exp));
                         }
                     }
@@ -1842,7 +1886,7 @@ namespace DslExpression
             }
             return v;
         }
-        protected override bool Load(Dsl.CallData callData)
+        protected override bool Load(Dsl.FunctionData callData)
         {
             for (int i = 0; i < callData.GetParamNum(); ++i) {
                 Dsl.ISyntaxComponent param = callData.GetParam(i);
@@ -1871,7 +1915,7 @@ namespace DslExpression
             v = string.Format(fmt, al.ToArray());
             return v;
         }
-        protected override bool Load(Dsl.CallData callData)
+        protected override bool Load(Dsl.FunctionData callData)
         {
             for (int i = 0; i < callData.GetParamNum(); ++i) {
                 Dsl.ISyntaxComponent param = callData.GetParam(i);
@@ -1898,7 +1942,7 @@ namespace DslExpression
             }
             return ret;
         }
-        protected override bool Load(Dsl.CallData callData)
+        protected override bool Load(Dsl.FunctionData callData)
         {
             for (int i = 0; i < callData.GetParamNum(); ++i) {
                 Dsl.ISyntaxComponent param = callData.GetParam(i);
@@ -1925,7 +1969,7 @@ namespace DslExpression
             }
             return ret;
         }
-        protected override bool Load(Dsl.CallData callData)
+        protected override bool Load(Dsl.FunctionData callData)
         {
             for (int i = 0; i < callData.GetParamNum(); ++i) {
                 Dsl.ISyntaxComponent param = callData.GetParam(i);
@@ -1952,7 +1996,7 @@ namespace DslExpression
             }
             return ret;
         }
-        protected override bool Load(Dsl.CallData callData)
+        protected override bool Load(Dsl.FunctionData callData)
         {
             for (int i = 0; i < callData.GetParamNum(); ++i) {
                 Dsl.ISyntaxComponent param = callData.GetParam(i);
@@ -1994,7 +2038,7 @@ namespace DslExpression
             }
             return ret;
         }
-        protected override bool Load(Dsl.CallData callData)
+        protected override bool Load(Dsl.FunctionData callData)
         {
             for (int i = 0; i < callData.GetParamNum(); ++i) {
                 Dsl.ISyntaxComponent param = callData.GetParam(i);
@@ -2078,7 +2122,7 @@ namespace DslExpression
             }
             return ret;
         }
-        protected override bool Load(Dsl.CallData callData)
+        protected override bool Load(Dsl.FunctionData callData)
         {
             for (int i = 0; i < callData.GetParamNum(); ++i) {
                 Dsl.ISyntaxComponent param = callData.GetParam(i);
@@ -2124,7 +2168,7 @@ namespace DslExpression
             }
             return ret;
         }
-        protected override bool Load(Dsl.CallData callData)
+        protected override bool Load(Dsl.FunctionData callData)
         {
             for (int i = 0; i < callData.GetParamNum(); ++i) {
                 Dsl.ISyntaxComponent param = callData.GetParam(i);
@@ -2221,7 +2265,7 @@ namespace DslExpression
             }
             return ret;
         }
-        protected override bool Load(Dsl.CallData callData)
+        protected override bool Load(Dsl.FunctionData callData)
         {
             for (int i = 0; i < callData.GetParamNum(); ++i) {
                 Dsl.ISyntaxComponent param = callData.GetParam(i);
@@ -2307,7 +2351,7 @@ namespace DslExpression
             }
             return ret;
         }
-        protected override bool Load(Dsl.CallData callData)
+        protected override bool Load(Dsl.FunctionData callData)
         {
             for (int i = 0; i < callData.GetParamNum(); ++i) {
                 Dsl.ISyntaxComponent param = callData.GetParam(i);
@@ -2395,7 +2439,7 @@ namespace DslExpression
             }
             return ret;
         }
-        protected override bool Load(Dsl.CallData callData)
+        protected override bool Load(Dsl.FunctionData callData)
         {
             for (int i = 0; i < callData.GetParamNum(); ++i) {
                 Dsl.ISyntaxComponent param = callData.GetParam(i);
@@ -2488,7 +2532,7 @@ namespace DslExpression
             }
             return v;
         }
-        protected override bool Load(Dsl.CallData callData)
+        protected override bool Load(Dsl.FunctionData callData)
         {
             Dsl.ISyntaxComponent list = callData.GetParam(0);
             m_List = Calculator.Load(list);
@@ -2520,7 +2564,7 @@ namespace DslExpression
             }
             return ret;
         }
-        protected override bool Load(Dsl.CallData callData)
+        protected override bool Load(Dsl.FunctionData callData)
         {
             for (int i = 0; i < callData.GetParamNum(); ++i) {
                 Dsl.ISyntaxComponent param = callData.GetParam(i);
@@ -2530,6 +2574,71 @@ namespace DslExpression
         }
 
         private List<IExpression> m_Expressions = new List<IExpression>();
+    }
+    internal class DotnetLoadExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            object r = null;
+            if (operands.Count >= 1) {
+                string path = operands[0] as string;
+                if (!string.IsNullOrEmpty(path) && File.Exists(path)) {
+                    r = Assembly.LoadFile(path);
+                }
+            }
+            return r;
+        }
+    }
+    internal class DotnetNewExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            object r = null;
+            if (operands.Count >= 2) {
+                var assem = operands[0] as Assembly;
+                string typeName = operands[1] as string;
+                if (null!=assem && !string.IsNullOrEmpty(typeName)) {
+                    var al = new ArrayList();
+                    for(int i = 2; i < operands.Count; ++i) {
+                        al.Add(operands[i]);
+                    }
+                    r = assem.CreateInstance(typeName, false, BindingFlags.CreateInstance, null, al.ToArray(), System.Globalization.CultureInfo.CurrentCulture, null);
+                }
+            }
+            return r;
+        }
+    }
+    internal class AssetPath2GUIDExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            object r = string.Empty;
+#if UNITY_EDITOR
+            if (operands.Count >= 1) {
+                var assetPath = operands[0] as string;
+                if (null != assetPath) {
+                    r = AssetDatabase.AssetPathToGUID(assetPath);
+                }
+            }
+#endif
+            return r;
+        }
+    }
+    internal class GUID2AssetPathExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            object r = string.Empty;
+#if UNITY_EDITOR
+            if (operands.Count >= 1) {
+                var guid = operands[0] as string;
+                if (null != guid) {
+                    r = AssetDatabase.GUIDToAssetPath(guid);
+                }
+            }
+#endif
+            return r;
+        }
     }
     internal class GetAssetPathExp : SimpleExpressionBase
     {
@@ -2551,7 +2660,30 @@ namespace DslExpression
             return r;
         }
     }
-    internal class GetDependenciesExp : SimpleExpressionBase
+    internal class GetGuidAndLocalFileIdentifierExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            object r = null;
+#if UNITY_EDITOR
+            if (operands.Count >= 1) {
+                var obj = operands[0] as UnityEngine.Object;
+                if (null != obj) {
+                    var pobj = PrefabUtility.GetCorrespondingObjectFromSource(obj);
+                    if (null == pobj)
+                        pobj = obj;
+                    string guid = string.Empty;
+                    long localId = 0;
+                    if(AssetDatabase.TryGetGUIDAndLocalFileIdentifier(pobj, out guid, out localId)) {
+                        r = new KeyValuePair<string, long>(guid, localId);
+                    }
+                }
+            }
+#endif
+            return r;
+        }
+    }
+    internal class GetDependenciesExp : DslExpression.SimpleExpressionBase
     {
         protected override object OnCalc(IList<object> operands)
         {
@@ -3045,6 +3177,141 @@ namespace DslExpression
             return new String(chars.ToArray());
         }
     }
+    internal class StringContainsExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            bool r = false;
+            if (operands.Count >= 2) {
+                string str = operands[0] as string;
+                r = true;
+                for(int i = 1; i < operands.Count; ++i) {
+                    var list = operands[i] as IList;
+                    if (null != list) {
+                        foreach (var o in list) {
+                            var key = o as string;
+                            if (!string.IsNullOrEmpty(key) && !str.Contains(key)) {
+                                return false;
+                            }
+                        }
+                    } else {
+                        var key = operands[i] as string;
+                        if (!string.IsNullOrEmpty(key) && !str.Contains(key)) {
+                            return false;
+                        }
+                    }
+                }
+            }
+            return r;
+        }
+    }
+    internal class StringNotContainsExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            bool r = false;
+            if (operands.Count >= 2) {
+                string str = operands[0] as string;
+                r = true;
+                for (int i = 1; i < operands.Count; ++i) {
+                    var list = operands[i] as IList;
+                    if (null != list) {
+                        foreach (var o in list) {
+                            var key = o as string;
+                            if (!string.IsNullOrEmpty(key) && str.Contains(key)) {
+                                return false;
+                            }
+                        }
+                    }
+                    else {
+                        var key = operands[i] as string;
+                        if (!string.IsNullOrEmpty(key) && str.Contains(key)) {
+                            return false;
+                        }
+                    }
+                }
+            }
+            return r;
+        }
+    }
+    internal class StringContainsAnyExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            bool r = false;
+            if (operands.Count >= 2) {
+                r = true;
+                string str = operands[0] as string;
+                for (int i = 1; i < operands.Count; ++i) {
+                    var list = operands[i] as IList;
+                    if (null != list) {
+                        foreach (var o in list) {
+                            var key = o as string;
+                            if (!string.IsNullOrEmpty(key)){
+                                if (str.Contains(key)) {
+                                    return true;
+                                }
+                                else {
+                                    r = false;
+                                }
+                            }
+                        }
+                    }
+                    else {
+                        var key = operands[i] as string;
+                        if (!string.IsNullOrEmpty(key)) {
+                            if (str.Contains(key)) {
+                                return true;
+                            }
+                            else {
+                                r = false;
+                            }
+                        }
+                    }
+                }
+            }
+            return r;
+        }
+    }
+    internal class StringNotContainsAnyExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            bool r = false;
+            if (operands.Count >= 2) {
+                r = true;
+                string str = operands[0] as string;
+                for (int i = 1; i < operands.Count; ++i) {
+                    var list = operands[i] as IList;
+                    if (null != list) {
+                        foreach (var o in list) {
+                            var key = o as string;
+                            if (!string.IsNullOrEmpty(key)) {
+                                if (!str.Contains(key)) {
+                                    return true;
+                                }
+                                else {
+                                    r = false;
+                                }
+                            }
+                        }
+                    }
+                    else {
+                        var key = operands[i] as string;
+                        if (!string.IsNullOrEmpty(key)) {
+                            if (!str.Contains(key)) {
+                                return true;
+                            }
+                            else {
+                                r = false;
+                            }
+                        }
+                    }
+                }
+            }
+            return r;
+        }
+    }
     internal class Str2IntExp : SimpleExpressionBase
     {
         protected override object OnCalc(IList<object> operands)
@@ -3054,6 +3321,51 @@ namespace DslExpression
                 var str = operands[0] as string;
                 int v;
                 if (int.TryParse(str, out v)) {
+                    r = v;
+                }
+            }
+            return r;
+        }
+    }
+    internal class Str2UintExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            object r = null;
+            if (operands.Count >= 1) {
+                var str = operands[0] as string;
+                uint v;
+                if (uint.TryParse(str, out v)) {
+                    r = v;
+                }
+            }
+            return r;
+        }
+    }
+    internal class Str2LongExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            object r = null;
+            if (operands.Count >= 1) {
+                var str = operands[0] as string;
+                long v;
+                if (long.TryParse(str, out v)) {
+                    r = v;
+                }
+            }
+            return r;
+        }
+    }
+    internal class Str2UlongExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            object r = null;
+            if (operands.Count >= 1) {
+                var str = operands[0] as string;
+                ulong v;
+                if (ulong.TryParse(str, out v)) {
                     r = v;
                 }
             }
@@ -3075,6 +3387,21 @@ namespace DslExpression
             return r;
         }
     }
+    internal class Str2DoubleExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            object r = null;
+            if (operands.Count >= 1) {
+                var str = operands[0] as string;
+                double v;
+                if (double.TryParse(str, out v)) {
+                    r = v;
+                }
+            }
+            return r;
+        }
+    }
     internal class Hex2IntExp : SimpleExpressionBase
     {
         protected override object OnCalc(IList<object> operands)
@@ -3087,6 +3414,97 @@ namespace DslExpression
                     r = v;
                 }
             }
+            return r;
+        }
+    }
+    internal class Hex2UintExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            object r = null;
+            if (operands.Count >= 1) {
+                var str = operands[0] as string;
+                uint v;
+                if (uint.TryParse(str, System.Globalization.NumberStyles.AllowHexSpecifier, null, out v)) {
+                    r = v;
+                }
+            }
+            return r;
+        }
+    }
+    internal class Hex2LongExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            object r = null;
+            if (operands.Count >= 1) {
+                var str = operands[0] as string;
+                long v;
+                if (long.TryParse(str, System.Globalization.NumberStyles.AllowHexSpecifier, null, out v)) {
+                    r = v;
+                }
+            }
+            return r;
+        }
+    }
+    internal class Hex2UlongExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            object r = null;
+            if (operands.Count >= 1) {
+                var str = operands[0] as string;
+                ulong v;
+                if (ulong.TryParse(str, System.Globalization.NumberStyles.AllowHexSpecifier, null, out v)) {
+                    r = v;
+                }
+            }
+            return r;
+        }
+    }
+    internal class DatetimeStrExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            object r = null;
+            if (operands.Count >= 1) {
+                var fmt = operands[0] as string;
+                r = DateTime.Now.ToString(fmt);
+            } else {
+                r = DateTime.Now.ToString();
+            }
+            return r;
+        }
+    }
+    internal class LongDateStrExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            object r = DateTime.Now.ToLongDateString();
+            return r;
+        }
+    }
+    internal class LongTimeStrExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            object r = DateTime.Now.ToShortDateString();
+            return r;
+        }
+    }
+    internal class ShortDateStrExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            object r = DateTime.Now.ToShortDateString();
+            return r;
+        }
+    }
+    internal class ShortTimeStrExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            object r = DateTime.Now.ToShortTimeString();
             return r;
         }
     }
@@ -3356,23 +3774,10 @@ namespace DslExpression
             r = dict;
             return r;
         }
-        protected override bool Load(Dsl.CallData callData)
-        {
-            for (int i = 0; i < callData.GetParamNum(); ++i) {
-                Dsl.CallData paramCallData = callData.GetParam(i) as Dsl.CallData;
-                if (null != paramCallData && paramCallData.GetParamNum() == 2) {
-                    var expKey = Calculator.Load(paramCallData.GetParam(0));
-                    m_Expressions.Add(expKey);
-                    var expVal = Calculator.Load(paramCallData.GetParam(1));
-                    m_Expressions.Add(expVal);
-                }
-            }
-            return true;
-        }
         protected override bool Load(Dsl.FunctionData funcData)
         {
-            for (int i = 0; i < funcData.GetStatementNum(); ++i) {
-                Dsl.CallData callData = funcData.GetStatement(i) as Dsl.CallData;
+            for (int i = 0; i < funcData.GetParamNum(); ++i) {
+                Dsl.FunctionData callData = funcData.GetParam(i) as Dsl.FunctionData;
                 if (null != callData && callData.GetParamNum() == 2) {
                     var expKey = Calculator.Load(callData.GetParam(0));
                     m_Expressions.Add(expKey);
@@ -3785,14 +4190,16 @@ namespace DslExpression
     {
         protected override object OnCalc(IList<object> operands)
         {
-            if (operands.Count == 1 && operands[0] is string) {
+            if (operands.Count >= 1) {
                 string name = operands[0] as string;
-                string[] args = System.Environment.GetCommandLineArgs();
-                int suffixIndex = Array.FindIndex(args, item => item == name);
-                if (suffixIndex != -1 && suffixIndex < args.Length - 1) {
-                    return args[suffixIndex + 1];
+                if (!string.IsNullOrEmpty(name)) {
+                    string[] args = System.Environment.GetCommandLineArgs();
+                    int suffixIndex = Array.FindIndex(args, item => item == name);
+                    if (suffixIndex != -1 && suffixIndex < args.Length - 1) {
+                        return args[suffixIndex + 1];
+                    }
                 }
-                return "";
+                return string.Empty;
             }
             else {
                 return Environment.GetCommandLineArgs();
@@ -4050,6 +4457,14 @@ namespace DslExpression
                 }
                 Debug.LogErrorFormat(fmt, al.ToArray());
             }
+            return r;
+        }
+    }
+    internal class CallStackExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            object r = System.Environment.StackTrace;
             return r;
         }
     }
@@ -4762,6 +5177,753 @@ namespace DslExpression
             return false;
         }
     }
+    internal class CommandExp : AbstractExpression
+    {
+        protected override object DoCalc()
+        {
+            int exitCode = 0;
+            MemoryStream ims = null, oms = null;
+            int ct = m_CommandConfigs.Count;
+            for (int i = 0; i < ct; ++i) {
+                try {
+                    if (i > 0) {
+                        ims = oms;
+                        oms = null;
+                    }
+                    if (i < ct - 1) {
+                        oms = new MemoryStream();
+                    }
+                    var cfg = m_CommandConfigs[i];
+                    if (cfg.m_Commands.Count > 0) {
+                        exitCode = ExecCommand(cfg, ims, oms);
+                    }
+                    else {
+                        exitCode = ExecProcess(cfg, ims, oms);
+                    }
+                }
+                finally {
+                    if (null != ims) {
+                        ims.Close();
+                        ims.Dispose();
+                        ims = null;
+                    }
+                }
+            }
+            return exitCode;
+        }
+        protected override bool Load(Dsl.FunctionData funcData)
+        {
+            if (!funcData.HaveStatement()) {
+                return LoadCall(funcData);
+            }
+            else {
+                var id = funcData.GetId();
+                if (funcData.IsHighOrder) {
+                    var callData = funcData.LowerOrderFunction;
+                    LoadCall(callData);
+                }
+                else {
+                    LoadCall(funcData);
+                }
+                if (funcData.HaveStatement()) {
+                    var cmd = m_CommandConfigs[m_CommandConfigs.Count - 1];
+                    for (int i = 0; i < funcData.GetParamNum(); ++i) {
+                        var comp = funcData.GetParam(i);
+                        var cd = comp as Dsl.FunctionData;
+                        if (null != cd) {
+                            int num = cd.GetParamNum();
+                            if (cd.HaveExternScript()) {
+                                string os = cd.GetId();
+                                string txt = cd.GetParamId(0);
+                                cmd.m_Commands.Add(os, txt);
+                            }
+                            else if (num >= 1) {
+                                string type = cd.GetId();
+                                var exp = Calculator.Load(cd.GetParam(0));
+                                if (type == "input") {
+                                    cmd.m_Input = exp;
+                                }
+                                else if (type == "output") {
+                                    cmd.m_Output = exp;
+                                }
+                                else if (type == "error") {
+                                    cmd.m_Error = exp;
+                                }
+                                else if (type == "redirecttoconsole") {
+                                    cmd.m_RedirectToConsole = exp;
+                                }
+                                else if (type == "nowait") {
+                                    cmd.m_NoWait = exp;
+                                }
+                                else if (type == "useshellexecute") {
+                                    cmd.m_UseShellExecute = exp;
+                                }
+                                else if (type == "verb") {
+                                    cmd.m_Verb = exp;
+                                }
+                                else if (type == "domain") {
+                                    cmd.m_Domain = exp;
+                                }
+                                else if (type == "user") {
+                                    cmd.m_UserName = exp;
+                                }
+                                else if (type == "password") {
+                                    cmd.m_Password = exp;
+                                }
+                                else if (type == "passwordincleartext") {
+                                    cmd.m_PasswordInClearText = exp;
+                                }
+                                else if (type == "loadprofile") {
+                                    cmd.m_LoadUserProfile = exp;
+                                }
+                                else if (type == "windowstyle") {
+                                    cmd.m_WindowStyle = exp;
+                                }
+                                else if (type == "newwindow") {
+                                    cmd.m_NewWindow = exp;
+                                }
+                                else if (type == "errordialog") {
+                                    cmd.m_ErrorDialog = exp;
+                                }
+                                else if (type == "workingdirectory") {
+                                    cmd.m_WorkingDirectory = exp;
+                                }
+                                else if (type == "encoding") {
+                                    cmd.m_Encoding = exp;
+                                }
+                                else {
+                                    Debug.LogWarningFormat("[syntax error] {0} line:{1}", cd.ToScriptString(false), cd.GetLine());
+                                }
+                            }
+                            else {
+                                Debug.LogWarningFormat("[syntax error] {0} line:{1}", cd.ToScriptString(false), cd.GetLine());
+                            }
+                        }
+                        else {
+                            Debug.LogErrorFormat("[syntax error] {0} line:{1}", comp.ToScriptString(false), comp.GetLine());
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+        protected override bool Load(Dsl.StatementData statementData)
+        {
+            for (int i = 0; i < statementData.GetFunctionNum(); ++i) {
+                var funcData = statementData.GetFunction(i);
+                Load(funcData);
+            }
+            return true;
+        }
+
+        private bool LoadCall(Dsl.FunctionData callData)
+        {
+            var cmd = new CommandConfig();
+            m_CommandConfigs.Add(cmd);
+
+            var id = callData.GetId();
+            if (id == "process") {
+                int num = callData.GetParamNum();
+                if (num > 0) {
+                    var param0 = callData.GetParam(0);
+                    var exp0 = Calculator.Load(param0);
+                    cmd.m_FileName = exp0;
+
+                    if (num > 1) {
+                        var param1 = callData.GetParam(1);
+                        var exp1 = Calculator.Load(param1);
+                        cmd.m_Argments = exp1;
+                    }
+                }
+                else {
+                    Debug.LogErrorFormat("[syntax error] {0} line:{1}", callData.ToScriptString(false), callData.GetLine());
+                }
+            }
+            else if (id == "command") {
+                int num = callData.GetParamNum();
+                if (num > 0) {
+                    Debug.LogErrorFormat("[syntax error] {0} line:{1}", callData.ToScriptString(false), callData.GetLine());
+                }
+            }
+            else {
+                Debug.LogErrorFormat("[syntax error] {0} line:{1}", callData.ToScriptString(false), callData.GetLine());
+            }
+            return true;
+        }
+        private int ExecProcess(CommandConfig cfg, Stream istream, Stream ostream)
+        {
+            string fileName = string.Empty;
+            if (null != cfg.m_FileName) {
+                fileName = cfg.m_FileName.Calc() as string;
+            }
+            string args = string.Empty;
+            if (null != cfg.m_Argments) {
+                args = cfg.m_Argments.Calc() as string;
+            }
+            bool noWait = false;
+            if (null != cfg.m_NoWait) {
+                noWait = (bool)Convert.ChangeType(cfg.m_NoWait.Calc(), typeof(bool));
+            }
+            DslCalculator.ProcessStartOption option = new DslCalculator.ProcessStartOption();
+            if (null != cfg.m_UseShellExecute) {
+                option.UseShellExecute = (bool)Convert.ChangeType(cfg.m_UseShellExecute.Calc(), typeof(bool));
+            }
+            if (null != cfg.m_Verb) {
+                option.Verb = cfg.m_Verb.Calc() as string;
+            }
+            if (null != cfg.m_Domain) {
+                option.Domain = cfg.m_Domain.Calc() as string;
+            }
+            if (null != cfg.m_UserName) {
+                option.UserName = cfg.m_UserName.Calc() as string;
+            }
+            if (null != cfg.m_Password) {
+                option.Password = cfg.m_Password.Calc() as string;
+            }
+            if (null != cfg.m_PasswordInClearText) {
+                option.PasswordInClearText = cfg.m_PasswordInClearText.Calc() as string;
+            }
+            if (null != cfg.m_LoadUserProfile) {
+                option.LoadUserProfile = (bool)Convert.ChangeType(cfg.m_LoadUserProfile.Calc(), typeof(bool));
+            }
+            if (null != cfg.m_WindowStyle) {
+                var str = cfg.m_WindowStyle.Calc() as string;
+                System.Diagnostics.ProcessWindowStyle style;
+                if (Enum.TryParse(str, out style)) {
+                    option.WindowStyle = style;
+                }
+            }
+            if (null != cfg.m_NewWindow) {
+                option.NewWindow = (bool)Convert.ChangeType(cfg.m_NewWindow.Calc(), typeof(bool));
+            }
+            if (null != cfg.m_ErrorDialog) {
+                option.ErrorDialog = (bool)Convert.ChangeType(cfg.m_ErrorDialog.Calc(), typeof(bool));
+            }
+            if (null != cfg.m_WorkingDirectory) {
+                option.WorkingDirectory = cfg.m_WorkingDirectory.Calc() as string;
+            }
+            Encoding encoding = null;
+            if (null != cfg.m_Encoding) {
+                var v = cfg.m_Encoding.Calc();
+                var name = v as string;
+                if (!string.IsNullOrEmpty(name)) {
+                    encoding = Encoding.GetEncoding(name);
+                }
+                else if (v is int) {
+                    int codePage = (int)Convert.ChangeType(v, typeof(int));
+                    encoding = Encoding.GetEncoding(codePage);
+                }
+            }
+            if (null == encoding) {
+                encoding = Encoding.UTF8;
+            }
+
+            fileName = Environment.ExpandEnvironmentVariables(fileName);
+            args = Environment.ExpandEnvironmentVariables(args);
+
+            IList<string> input = null;
+            if (null != cfg.m_Input) {
+                var v = cfg.m_Input.Calc();
+                try {
+                    var str = v as string;
+                    if (!string.IsNullOrEmpty(str)) {
+                        if (str[0] == '@' || str[0] == '$') {
+                            object val = Calculator.GetVariable(str);
+                            if (null != val) {
+                                var slist = new List<string>();
+                                var list = val as IList;
+                                foreach (var s in list) {
+                                    slist.Add(s.ToString());
+                                }
+                                input = slist;
+                            }
+                        }
+                        else {
+                            str = Environment.ExpandEnvironmentVariables(str);
+                            input = File.ReadAllLines(str);
+                        }
+                    }
+                    else {
+                        int vn = (int)Convert.ChangeType(v, typeof(int));
+                        object val = Calculator.GetVariable(vn);
+                        if (null != val) {
+                            var slist = new List<string>();
+                            var list = val as IList;
+                            foreach (var s in list) {
+                                slist.Add(s.ToString());
+                            }
+                            input = slist;
+                        }
+                    }
+                }
+                catch (Exception ex) {
+                    Debug.LogFormat("input {0} failed:{1}", v, ex.Message);
+                }
+            }
+            bool redirectToConsole = false;
+            StringBuilder outputBuilder = null;
+            StringBuilder errorBuilder = null;
+            object output = null;
+            object error = null;
+            if (null != cfg.m_Output) {
+                var v = cfg.m_Output.Calc();
+                var str = v as string;
+                if (!string.IsNullOrEmpty(str)) {
+                    str = Environment.ExpandEnvironmentVariables(str);
+                    output = str;
+                }
+                else {
+                    output = v;
+                }
+                outputBuilder = new StringBuilder();
+            }
+            if (null != cfg.m_Error) {
+                var v = cfg.m_Error.Calc();
+                var str = v as string;
+                if (!string.IsNullOrEmpty(str)) {
+                    str = Environment.ExpandEnvironmentVariables(str);
+                    error = str;
+                }
+                else {
+                    error = v;
+                }
+                errorBuilder = new StringBuilder();
+            }
+            if (null != cfg.m_RedirectToConsole) {
+                var v = cfg.m_RedirectToConsole.Calc();
+                if (null != v) {
+                    redirectToConsole = (bool)Convert.ChangeType(v, typeof(bool));
+                }
+            }
+            int exitCode = DslCalculator.NewProcess(noWait, fileName, args, option, istream, ostream, input, outputBuilder, errorBuilder, redirectToConsole, encoding);
+            Debug.LogFormat("new process:{0} {1}, exit code:{2}", fileName, args, exitCode);
+
+            if (null != outputBuilder && null != output) {
+                try {
+                    var file = output as string;
+                    if (!string.IsNullOrEmpty(file)) {
+                        if (file[0] == '@' || file[0] == '$') {
+                            Calculator.SetVariable(file, outputBuilder.ToString());
+                        }
+                        else {
+                            File.WriteAllText(file, outputBuilder.ToString());
+                        }
+                    }
+                    else {
+                        int v = (int)Convert.ChangeType(output, typeof(int));
+                        Calculator.SetVariable(v, outputBuilder.ToString());
+                    }
+                }
+                catch (Exception ex) {
+                    Debug.LogFormat("output {0} failed:{1}", output, ex.Message);
+                }
+            }
+            if (null != errorBuilder && null != error) {
+                try {
+                    var file = error as string;
+                    if (!string.IsNullOrEmpty(file)) {
+                        if (file[0] == '@' || file[0] == '$') {
+                            Calculator.SetVariable(file, errorBuilder.ToString());
+                        }
+                        else {
+                            File.WriteAllText(file, errorBuilder.ToString());
+                        }
+                    }
+                    else {
+                        int v = (int)Convert.ChangeType(error, typeof(int));
+                        Calculator.SetVariable(v, errorBuilder.ToString());
+                    }
+                }
+                catch (Exception ex) {
+                    Debug.LogFormat("error {0} failed:{1}", error, ex.Message);
+                }
+            }
+            return exitCode;
+        }
+        private int ExecCommand(CommandConfig cfg, Stream istream, Stream ostream)
+        {
+            int exitCode = 0;
+            string os = string.Empty;
+            if (Environment.OSVersion.Platform == PlatformID.Unix || Environment.OSVersion.Platform == PlatformID.MacOSX)
+                os = "unix";
+            else
+                os = "win";
+            string cmd;
+            if (cfg.m_Commands.TryGetValue(os, out cmd) || cfg.m_Commands.TryGetValue("common", out cmd)) {
+                bool noWait = false;
+                if (null != cfg.m_NoWait) {
+                    noWait = (bool)Convert.ChangeType(cfg.m_NoWait.Calc(), typeof(bool));
+                }
+                DslCalculator.ProcessStartOption option = new DslCalculator.ProcessStartOption();
+                if (null != cfg.m_UseShellExecute) {
+                    option.UseShellExecute = (bool)Convert.ChangeType(cfg.m_UseShellExecute.Calc(), typeof(bool));
+                }
+                if (null != cfg.m_Verb) {
+                    option.Verb = cfg.m_Verb.Calc() as string;
+                }
+                if (null != cfg.m_Domain) {
+                    option.Domain = cfg.m_Domain.Calc() as string;
+                }
+                if (null != cfg.m_UserName) {
+                    option.UserName = cfg.m_UserName.Calc() as string;
+                }
+                if (null != cfg.m_Password) {
+                    option.Password = cfg.m_Password.Calc() as string;
+                }
+                if (null != cfg.m_PasswordInClearText) {
+                    option.PasswordInClearText = cfg.m_PasswordInClearText.Calc() as string;
+                }
+                if (null != cfg.m_LoadUserProfile) {
+                    option.LoadUserProfile = (bool)Convert.ChangeType(cfg.m_LoadUserProfile.Calc(), typeof(bool));
+                }
+                if (null != cfg.m_WindowStyle) {
+                    var str = cfg.m_WindowStyle.Calc() as string;
+                    System.Diagnostics.ProcessWindowStyle style;
+                    if (Enum.TryParse(str, out style)) {
+                        option.WindowStyle = style;
+                    }
+                }
+                if (null != cfg.m_NewWindow) {
+                    option.NewWindow = (bool)Convert.ChangeType(cfg.m_NewWindow.Calc(), typeof(bool));
+                }
+                if (null != cfg.m_ErrorDialog) {
+                    option.ErrorDialog = (bool)Convert.ChangeType(cfg.m_ErrorDialog.Calc(), typeof(bool));
+                }
+                if (null != cfg.m_WorkingDirectory) {
+                    option.WorkingDirectory = cfg.m_WorkingDirectory.Calc() as string;
+                }
+                Encoding encoding = null;
+                if (null != cfg.m_Encoding) {
+                    var v = cfg.m_Encoding.Calc();
+                    var name = v as string;
+                    if (!string.IsNullOrEmpty(name)) {
+                        encoding = Encoding.GetEncoding(name);
+                    }
+                    else if (v is int) {
+                        int codePage = (int)Convert.ChangeType(v, typeof(int));
+                        encoding = Encoding.GetEncoding(codePage);
+                    }
+                }
+                if (null == encoding) {
+                    encoding = Encoding.UTF8;
+                }
+                IList<string> input = null;
+                if (null != cfg.m_Input) {
+                    var v = cfg.m_Input.Calc();
+                    try {
+                        var str = v as string;
+                        if (!string.IsNullOrEmpty(str)) {
+                            if (str[0] == '@' || str[0] == '$') {
+                                object val = Calculator.GetVariable(str);
+                                if (null != val) {
+                                    var slist = new List<string>();
+                                    var list = val as IList;
+                                    foreach (var s in list) {
+                                        slist.Add(s.ToString());
+                                    }
+                                    input = slist;
+                                }
+                            }
+                            else {
+                                str = Environment.ExpandEnvironmentVariables(str);
+                                input = File.ReadAllLines(str);
+                            }
+                        }
+                        else {
+                            int vn = (int)Convert.ChangeType(v, typeof(int));
+                            object val = Calculator.GetVariable(vn);
+                            if (null != val) {
+                                var slist = new List<string>();
+                                var list = val as IList;
+                                foreach (var s in list) {
+                                    slist.Add(s.ToString());
+                                }
+                                input = slist;
+                            }
+                        }
+                    }
+                    catch (Exception ex) {
+                        Debug.LogFormat("input {0} failed:{1}", v, ex.Message);
+                    }
+                }
+                bool redirectToConsole = false;
+                StringBuilder outputBuilder = null;
+                StringBuilder errorBuilder = null;
+                object output = null;
+                object error = null;
+                if (null != cfg.m_Output) {
+                    var v = cfg.m_Output.Calc();
+                    var str = v as string;
+                    if (!string.IsNullOrEmpty(str)) {
+                        str = Environment.ExpandEnvironmentVariables(str);
+                        output = str;
+                    }
+                    else {
+                        output = v;
+                    }
+                    outputBuilder = new StringBuilder();
+                }
+                if (null != cfg.m_Error) {
+                    var v = cfg.m_Error.Calc();
+                    var str = v as string;
+                    if (!string.IsNullOrEmpty(str)) {
+                        str = Environment.ExpandEnvironmentVariables(str);
+                        error = str;
+                    }
+                    else {
+                        error = v;
+                    }
+                    errorBuilder = new StringBuilder();
+                }
+                if (null != cfg.m_RedirectToConsole) {
+                    var v = cfg.m_RedirectToConsole.Calc();
+                    if (null != v) {
+                        redirectToConsole = (bool)Convert.ChangeType(v, typeof(bool));
+                    }
+                }
+
+                cmd = cmd.Trim();
+                var lines = cmd.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                string oneCmd = string.Join(" ", lines).Trim();
+                if (!string.IsNullOrEmpty(oneCmd)) {
+                    int split = oneCmd.IndexOfAny(new char[] { ' ', '\t' });
+                    string fileName = oneCmd;
+                    string args = string.Empty;
+                    if (split > 0) {
+                        fileName = oneCmd.Substring(0, split).Trim();
+                        args = oneCmd.Substring(split).Trim();
+                    }
+
+                    fileName = Environment.ExpandEnvironmentVariables(fileName);
+                    args = Environment.ExpandEnvironmentVariables(args);
+
+                    exitCode = DslCalculator.NewProcess(noWait, fileName, args, option, istream, ostream, input, outputBuilder, errorBuilder, redirectToConsole, encoding);
+                    Debug.LogFormat("new process:{0} {1}, exit code:{2}", fileName, args, exitCode);
+
+                    if (null != outputBuilder && null != output) {
+                        try {
+                            var file = output as string;
+                            if (!string.IsNullOrEmpty(file)) {
+                                if (file[0] == '@' || file[0] == '$') {
+                                    Calculator.SetVariable(file, outputBuilder.ToString());
+                                }
+                                else {
+                                    File.WriteAllText(file, outputBuilder.ToString());
+                                }
+                            }
+                            else {
+                                int v = (int)Convert.ChangeType(output, typeof(int));
+                                Calculator.SetVariable(v, outputBuilder.ToString());
+                            }
+                        }
+                        catch (Exception ex) {
+                            Debug.LogFormat("output {0} failed:{1}", output, ex.Message);
+                        }
+                    }
+                    if (null != errorBuilder && null != error) {
+                        try {
+                            var file = error as string;
+                            if (!string.IsNullOrEmpty(file)) {
+                                if (file[0] == '@' || file[0] == '$') {
+                                    Calculator.SetVariable(file, errorBuilder.ToString());
+                                }
+                                else {
+                                    File.WriteAllText(file, errorBuilder.ToString());
+                                }
+                            }
+                            else {
+                                int v = (int)Convert.ChangeType(error, typeof(int));
+                                Calculator.SetVariable(v, errorBuilder.ToString());
+                            }
+                        }
+                        catch (Exception ex) {
+                            Debug.LogFormat("error {0} failed:{1}", error, ex.Message);
+                        }
+                    }
+                }
+            }
+            return exitCode;
+        }
+
+        private class CommandConfig
+        {
+            internal IExpression m_FileName = null;
+            internal IExpression m_Argments = null;
+            internal Dictionary<string, string> m_Commands = new Dictionary<string, string>();
+
+            internal IExpression m_NoWait = null;
+            internal IExpression m_UseShellExecute = null;
+            internal IExpression m_Verb = null;
+            internal IExpression m_Domain = null;
+            internal IExpression m_UserName = null;
+            internal IExpression m_Password = null;
+            internal IExpression m_PasswordInClearText = null;
+            internal IExpression m_LoadUserProfile = null;
+            internal IExpression m_WindowStyle = null;
+            internal IExpression m_NewWindow = null;
+            internal IExpression m_ErrorDialog = null;
+            internal IExpression m_WorkingDirectory = null;
+            internal IExpression m_Encoding = null;
+            internal IExpression m_Input = null;
+            internal IExpression m_Output = null;
+            internal IExpression m_Error = null;
+            internal IExpression m_RedirectToConsole = null;
+        }
+
+        private List<CommandConfig> m_CommandConfigs = new List<CommandConfig>();
+    }
+    internal class KillExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            object ret = 0;
+            if (operands.Count >= 1) {
+                int myselfId = 0;
+                var myself = System.Diagnostics.Process.GetCurrentProcess();
+                if (null != myself) {
+                    myselfId = myself.Id;
+                }
+                var vObj = operands[0];
+                var name = vObj as string;
+                if (!string.IsNullOrEmpty(name)) {
+                    int ct = 0;
+                    var ps = System.Diagnostics.Process.GetProcessesByName(name);
+                    foreach (var p in ps) {
+                        if (p.Id != myselfId) {
+                            Debug.LogFormat("kill {0}[pid:{1},session id:{2}]", p.ProcessName, p.Id, p.SessionId);
+                            p.Kill();
+                            ++ct;
+                        }
+                    }
+                    ret = ct;
+                }
+                else if (vObj is int) {
+                    int pid = (int)Convert.ChangeType(vObj, typeof(int));
+                    var p = System.Diagnostics.Process.GetProcessById(pid);
+                    if (null != p && p.Id != myselfId) {
+                        Debug.LogFormat("kill {0}[pid:{1},session id:{2}]", p.ProcessName, p.Id, p.SessionId);
+                        p.Kill();
+                        ret = 1;
+                    }
+                }
+                else {
+
+                }
+            }
+            return ret;
+        }
+    }
+    internal class KillMeExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            int ret = 0;
+            var p = System.Diagnostics.Process.GetCurrentProcess();
+            if (null != p) {
+                ret = p.Id;
+                int exitCode = 0;
+                if (operands.Count >= 1) {
+                    exitCode = (int)Convert.ChangeType(operands[0], typeof(int));
+                }
+                Debug.LogFormat("killme {0}[pid:{1},session id:{2}] exit code:{3}", p.ProcessName, p.Id, p.SessionId, exitCode);
+                Environment.Exit(exitCode);
+            }
+            return ret;
+        }
+    }
+    internal class GetCurrentProcessIdExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            int ret = 0;
+            var p = System.Diagnostics.Process.GetCurrentProcess();
+            if (null != p) {
+                ret = p.Id;
+            }
+            return ret;
+        }
+    }
+    internal class ListProcessesExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            IList<System.Diagnostics.Process> ret = null;
+            var ps = System.Diagnostics.Process.GetProcesses();
+            string filter = null;
+            if (operands.Count >= 1) {
+                filter = operands[0] as string;
+            }
+            if (null == filter)
+                filter = string.Empty;
+            if (!string.IsNullOrEmpty(filter)) {
+                var list = new List<System.Diagnostics.Process>();
+                foreach (var p in ps) {
+                    try {
+                        if (!p.HasExited) {
+                            if (p.ProcessName.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0) {
+                                list.Add(p);
+                            }
+                        }
+                    }
+                    catch {
+                    }
+                }
+                ret = list;
+            }
+            else {
+                ret = ps;
+            }
+            return ret;
+        }
+    }
+    internal class WaitExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            object ret = null;
+            if (operands.Count >= 1) {
+                var v = operands[0];
+                if (null != v) {
+                    int time = (int)Convert.ChangeType(v, typeof(int));
+                    System.Threading.Thread.Sleep(time);
+                    ret = time;
+                }
+            }
+            return ret;
+        }
+    }
+    internal class WaitAllExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            var tasks = DslCalculator.Tasks;
+            int timeout = -1;
+            if (operands.Count >= 1) {
+                timeout = (int)Convert.ChangeType(operands[0], typeof(int));
+            }
+            List<int> results = new List<int>();
+            if (Task.WaitAll(tasks.ToArray(), timeout)) {
+                foreach (var task in tasks) {
+                    results.Add(task.Result);
+                }
+            }
+            return results;
+        }
+    }
+    internal class WaitStartIntervalExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            if (operands.Count >= 1) {
+                var v = operands[0];
+                if (null != v) {
+                    DslCalculator.CheckStartInterval = (int)Convert.ChangeType(v, typeof(int));
+                }
+            }
+            return DslCalculator.CheckStartInterval;
+        }
+    }
+
     internal class DisplayProgressBarExp : SimpleExpressionBase
     {
         protected override object OnCalc(IList<object> operands)
@@ -4991,6 +6153,163 @@ namespace DslExpression
 #endif
         }
     }
+    internal class CalcMd5Exp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            object r = null;
+            if (operands.Count >= 1) {
+                var file = operands[0] as string;
+                if (null != file) {
+                    r = CalcMD5(file);
+                }
+            }
+            return r;
+        }
+        public string CalcMD5(string file)
+        {
+            byte[] array = null;
+            using (var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)) {
+                MD5 md5 = MD5.Create();
+                array = md5.ComputeHash(stream);
+                stream.Close();
+            }
+            if (null != array) {
+                StringBuilder stringBuilder = new StringBuilder();
+                for (int i = 0; i < array.Length; i++) {
+                    stringBuilder.Append(array[i].ToString("x2"));
+                }
+                return stringBuilder.ToString();
+            }
+            else {
+                return string.Empty;
+            }
+        }
+    }
+#if QINSHI
+    internal class DebugValueExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            string ret = string.Empty;
+            if (operands.Count >= 1) {
+                string name = operands[0] as string;
+                if (operands.Count >= 2) {
+                    var val = operands[1];
+                    if (!string.IsNullOrEmpty(name)) {
+                        string valStr = null;
+                        if (null != val)
+                            valStr = val.ToString();
+                        GameFramework.GmCommands.GlobalDebugValues.SetValue(name, valStr);
+                        ret = valStr;
+                    }
+                } else {
+                    ret = GameFramework.GmCommands.GlobalDebugValues.GetStringValue(name);
+                }
+            }
+            return ret;
+        }
+    }
+    internal class StoryVarExp : SimpleExpressionBase
+    {
+        protected override object OnCalc(IList<object> operands)
+        {
+            object ret = null;
+            if (operands.Count >= 1) {
+                string name = operands[0] as string;
+                if (operands.Count >= 2) {
+                    var val = operands[1];
+                    if (!string.IsNullOrEmpty(name)) {
+                        var instance = CsLibrary.GmCommands.ClientGmStorySystem.Instance.GetStory("main");
+                        if (null == instance) {
+                            string txt = "script(main){onmessage(\"start\"){};};";
+                            CsLibrary.GmCommands.ClientGmStorySystem.Instance.LoadStoryText(Encoding.UTF8.GetBytes(txt));
+                            instance = CsLibrary.GmCommands.ClientGmStorySystem.Instance.GetStory("main");
+                        }
+                        instance.SetVariable(name, val);
+                        ret = val;
+                    }
+                }
+                else {
+                    var instance = CsLibrary.GmCommands.ClientGmStorySystem.Instance.GetStory("main");
+                    if (null == instance) {
+                        string txt = "script(main){onmessage(\"start\"){};};";
+                        CsLibrary.GmCommands.ClientGmStorySystem.Instance.LoadStoryText(Encoding.UTF8.GetBytes(txt));
+                        instance = CsLibrary.GmCommands.ClientGmStorySystem.Instance.GetStory("main");
+                    }
+                    instance.TryGetVariable(name, out ret);
+                }
+            }
+            return ret;
+        }
+    }
+    internal class StoryValueExp : AbstractExpression
+    {
+        protected override object DoCalc()
+        {
+            object ret = null;
+            var instance = GameFramework.GmCommands.ClientGmStorySystem.Instance.GetStory("main");
+            if (null == instance) {
+                string txt = "script(main){onmessage(\"start\"){};};";
+                GameFramework.GmCommands.ClientGmStorySystem.Instance.LoadStoryText(Encoding.UTF8.GetBytes(txt));
+                GameFramework.GmCommands.ClientGmStorySystem.Instance.StartStory("main");
+                instance = GameFramework.GmCommands.ClientGmStorySystem.Instance.GetStory("main");
+            }
+            var handler = instance.GetMessageHandler("start");
+            foreach (var exp in m_Values) {
+                exp.Evaluate(instance, handler, null, null);
+                if (exp.HaveValue) {
+                    ret = exp.Value;
+                }
+            }
+            return ret;
+        }
+        protected override bool Load(Dsl.CallData callData)
+        {
+            int num = callData.GetParamNum();
+            for (int ix = 0; ix < num; ++ix) {
+                Dsl.ISyntaxComponent param = callData.GetParam(ix);
+                var exp = StorySystem.StoryValueManager.Instance.CalcValue(param);
+                m_Values.Add(exp);
+            }
+            return true;
+        }
+
+        private List<StorySystem.IStoryValue> m_Values = new List<StorySystem.IStoryValue>();
+    }
+    internal class StoryCommandExp : AbstractExpression
+    {
+        protected override object DoCalc()
+        {
+            var instance = GameFramework.GmCommands.ClientGmStorySystem.Instance.GetStory("main");
+            if (null == instance) {
+                string txt = "script(main){onmessage(\"start\"){};};";
+                GameFramework.GmCommands.ClientGmStorySystem.Instance.LoadStoryText(Encoding.UTF8.GetBytes(txt));
+                instance = GameFramework.GmCommands.ClientGmStorySystem.Instance.GetStory("main");
+            }
+            var handler = instance.GetMessageHandler("start");
+            foreach (var cmd in m_Commands) {
+                cmd.Reset();
+            }
+            foreach (var cmd in m_Commands) {
+                cmd.Execute(instance, handler, 0, null, null);
+            }
+            return null;
+        }
+        protected override bool Load(Dsl.CallData callData)
+        {
+            int num = callData.GetParamNum();
+            for (int ix = 0; ix < num; ++ix) {
+                Dsl.ISyntaxComponent param = callData.GetParam(ix);
+                var cmd = StorySystem.StoryCommandManager.Instance.CreateCommand(param);
+                m_Commands.Add(cmd);
+            }
+            return true;
+        }
+
+        private List<StorySystem.IStoryCommand> m_Commands = new List<StorySystem.IStoryCommand>();
+    }
+#endif
     public enum RunStateEnum
     {
         Normal = 0,
@@ -5081,7 +6400,12 @@ namespace DslExpression
             Register("dotnetget", new ExpressionFactoryHelper<DotnetGetExp>());
             Register("linq", new ExpressionFactoryHelper<LinqExp>());
             Register("isnull", new ExpressionFactoryHelper<IsNullExp>());
+            Register("dotnetload", new ExpressionFactoryHelper<DotnetLoadExp>());
+            Register("dotnetnew", new ExpressionFactoryHelper<DotnetNewExp>());
+            Register("assetpath2guid", new ExpressionFactoryHelper<AssetPath2GUIDExp>());
+            Register("guid2assetpath", new ExpressionFactoryHelper<GUID2AssetPathExp>());
             Register("getassetpath", new ExpressionFactoryHelper<GetAssetPathExp>());
+            Register("getguidandfileid", new ExpressionFactoryHelper<GetGuidAndLocalFileIdentifierExp>());
             Register("getdependencies", new ExpressionFactoryHelper<GetDependenciesExp>());
             Register("getassetimporter", new ExpressionFactoryHelper<GetAssetImporterExp>());
             Register("loadasset", new ExpressionFactoryHelper<LoadAssetExp>());
@@ -5109,9 +6433,25 @@ namespace DslExpression
             Register("stringreplace", new ExpressionFactoryHelper<StringReplaceExp>());
             Register("stringreplacechar", new ExpressionFactoryHelper<StringReplaceCharExp>());
             Register("makestring", new ExpressionFactoryHelper<MakeStringExp>());
+            Register("stringcontains", new ExpressionFactoryHelper<StringContainsExp>());
+            Register("stringnotcontains", new ExpressionFactoryHelper<StringNotContainsExp>());
+            Register("stringcontainsany", new ExpressionFactoryHelper<StringContainsAnyExp>());
+            Register("stringnotcontainsany", new ExpressionFactoryHelper<StringNotContainsAnyExp>());
             Register("str2int", new ExpressionFactoryHelper<Str2IntExp>());
+            Register("str2uint", new ExpressionFactoryHelper<Str2UintExp>());
+            Register("str2long", new ExpressionFactoryHelper<Str2LongExp>());
+            Register("str2ulong", new ExpressionFactoryHelper<Str2UlongExp>());
             Register("str2float", new ExpressionFactoryHelper<Str2FloatExp>());
+            Register("str2double", new ExpressionFactoryHelper<Str2DoubleExp>());
             Register("hex2int", new ExpressionFactoryHelper<Hex2IntExp>());
+            Register("hex2uint", new ExpressionFactoryHelper<Hex2UintExp>());
+            Register("hex2long", new ExpressionFactoryHelper<Hex2LongExp>());
+            Register("hex2ulong", new ExpressionFactoryHelper<Hex2UlongExp>());
+            Register("datetimestr", new ExpressionFactoryHelper<DatetimeStrExp>());
+            Register("longdatestr", new ExpressionFactoryHelper<LongDateStrExp>());
+            Register("longtimestr", new ExpressionFactoryHelper<LongTimeStrExp>());
+            Register("shortdatestr", new ExpressionFactoryHelper<ShortDateStrExp>());
+            Register("shorttimestr", new ExpressionFactoryHelper<ShortTimeStrExp>());
             Register("isnullorempty", new ExpressionFactoryHelper<IsNullOrEmptyExp>());
             Register("array", new ExpressionFactoryHelper<ArrayExp>());
             Register("toarray", new ExpressionFactoryHelper<ToArrayExp>());
@@ -5176,6 +6516,7 @@ namespace DslExpression
             Register("debuglog", new ExpressionFactoryHelper<DebugLogExp>());
             Register("debugwarning", new ExpressionFactoryHelper<DebugWarningExp>());
             Register("debugerror", new ExpressionFactoryHelper<DebugErrorExp>());
+            Register("callstack", new ExpressionFactoryHelper<CallStackExp>());
             Register("call", new ExpressionFactoryHelper<CallExp>());
             Register("return", new ExpressionFactoryHelper<ReturnExp>());
             Register("redirect", new ExpressionFactoryHelper<RedirectExp>());
@@ -5204,6 +6545,15 @@ namespace DslExpression
             Register("writealllines", new ExpressionFactoryHelper<WriteAllLinesExp>());
             Register("readalltext", new ExpressionFactoryHelper<ReadAllTextExp>());
             Register("writealltext", new ExpressionFactoryHelper<WriteAllTextExp>());
+            Register("process", new ExpressionFactoryHelper<CommandExp>());
+            Register("command", new ExpressionFactoryHelper<CommandExp>());
+            Register("kill", new ExpressionFactoryHelper<KillExp>());
+            Register("killme", new ExpressionFactoryHelper<KillMeExp>());
+            Register("pid", new ExpressionFactoryHelper<GetCurrentProcessIdExp>());
+            Register("plist", new ExpressionFactoryHelper<ListProcessesExp>());
+            Register("wait", new ExpressionFactoryHelper<WaitExp>());
+            Register("waitall", new ExpressionFactoryHelper<WaitAllExp>());
+            Register("waitstartinterval", new ExpressionFactoryHelper<WaitStartIntervalExp>());
 
             Register("displayprogressbar", new ExpressionFactoryHelper<DisplayProgressBarExp>());
             Register("displaycancelableprogressbar", new ExpressionFactoryHelper<DisplayCancelableProgressBarExp>());
@@ -5216,6 +6566,13 @@ namespace DslExpression
             Register("savefilepanelinproject", new ExpressionFactoryHelper<SaveFilePanelInProjectExp>());
             Register("savefolderpanel", new ExpressionFactoryHelper<SaveFolderPanelExp>());
             Register("displaydialog", new ExpressionFactoryHelper<DisplayDialogExp>());
+            Register("calcmd5", new ExpressionFactoryHelper<CalcMd5Exp>());
+#if QINSHI
+            Register("debugvalue", new ExpressionFactoryHelper<DebugValueExp>());
+            Register("storyvar", new ExpressionFactoryHelper<StoryVarExp>());
+            Register("storyvalue", new ExpressionFactoryHelper<StoryValueExp>());
+            Register("storycommand", new ExpressionFactoryHelper<StoryCommandExp>());
+#endif
         }
         public void Register(string name, IExpressionFactory factory)
         {
@@ -5272,15 +6629,18 @@ namespace DslExpression
             var func = info as Dsl.FunctionData;
             string id;
             if (null != func) {
-                id = func.Call.GetParamId(0);
+                if (func.IsHighOrder)
+                    id = func.LowerOrderFunction.GetParamId(0);
+                else
+                    return;
             }
             else {
                 var statement = info as Dsl.StatementData;
                 if (null != statement && statement.GetFunctionNum() == 2) {
-                    id = statement.First.Call.GetParamId(0);
+                    id = statement.First.GetParamId(0);
                     func = statement.Second;
-                    if (func.GetId() == "args") {
-                        if (func.Call.GetParamNum() > 0) {
+                    if (func.GetId() == "args" && func.IsHighOrder) {
+                        if (func.LowerOrderFunction.GetParamNum() > 0) {
                             List<string> names;
                             if (!m_ProcArgNames.TryGetValue(id, out names)) {
                                 names = new List<string>();
@@ -5289,7 +6649,7 @@ namespace DslExpression
                             else {
                                 names.Clear();
                             }
-                            foreach (var p in func.Call.Params) {
+                            foreach (var p in func.LowerOrderFunction.Params) {
                                 names.Add(p.GetId());
                             }
                         }
@@ -5306,10 +6666,11 @@ namespace DslExpression
             if (!m_Procs.TryGetValue(id, out list)) {
                 list = new List<IExpression>();
                 m_Procs.Add(id, list);
-            } else {
+            }
+            else {
                 list.Clear();
             }
-            foreach (Dsl.ISyntaxComponent comp in func.Statements) {
+            foreach (Dsl.ISyntaxComponent comp in func.Params) {
                 var exp = Load(comp);
                 if (null != exp) {
                     list.Add(exp);
@@ -5337,10 +6698,11 @@ namespace DslExpression
             if (!m_Procs.TryGetValue(proc, out list)) {
                 list = new List<IExpression>();
                 m_Procs.Add(proc, list);
-            } else {
+            }
+            else {
                 list.Clear();
             }
-            foreach (Dsl.ISyntaxComponent comp in func.Statements) {
+            foreach (Dsl.ISyntaxComponent comp in func.Params) {
                 var exp = Load(comp);
                 if (null != exp) {
                     list.Add(exp);
@@ -5515,9 +6877,24 @@ namespace DslExpression
             if (null != valueData) {
                 int idType = valueData.GetIdType();
                 if (idType == Dsl.ValueData.ID_TOKEN) {
-                    NamedVarGet varExp = new NamedVarGet();
-                    varExp.Load(comp, this);
-                    return varExp;
+                    string id = valueData.GetId();
+                    var p = Create(id);
+                    if (null != p) {
+                        //将无参数名字转换为无参函数调用
+                        Dsl.FunctionData fd = new Dsl.FunctionData();
+                        fd.Name.CopyFrom(valueData);
+                        fd.SetParamClass((int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_PARENTHESIS);
+                        if (!p.Load(fd, this)) {
+                            //error
+                            Debug.LogWarningFormat("DslCalculator error, {0} line {1}", comp.ToScriptString(false), comp.GetLine());
+                        }
+                        return p;
+                    }
+                    else {
+                        NamedVarGet varExp = new NamedVarGet();
+                        varExp.Load(comp, this);
+                        return varExp;
+                    }
                 }
                 else {
                     ConstGet constExp = new ConstGet();
@@ -5526,166 +6903,165 @@ namespace DslExpression
                 }
             }
             else {
-                Dsl.CallData callData = comp as Dsl.CallData;
-                if (null != callData) {
-                    if (!callData.HaveId() && !callData.IsHighOrder && (callData.GetParamClass() == (int)Dsl.CallData.ParamClassEnum.PARAM_CLASS_PARENTHESIS || callData.GetParamClass() == (int)Dsl.CallData.ParamClassEnum.PARAM_CLASS_BRACKET)) {
-                        switch (callData.GetParamClass()) {
-                            case (int)Dsl.CallData.ParamClassEnum.PARAM_CLASS_PARENTHESIS:
-                                int num = callData.GetParamNum();
-                                if (num == 1) {
-                                    Dsl.ISyntaxComponent param = callData.GetParam(0);
-                                    return Load(param);
-                                }
-                                else {
-                                    ParenthesisExp exp = new ParenthesisExp();
-                                    exp.Load(comp, this);
-                                    return exp;
-                                }
-                            case (int)Dsl.CallData.ParamClassEnum.PARAM_CLASS_BRACKET: {
-                                    ArrayExp exp = new ArrayExp();
-                                    exp.Load(comp, this);
-                                    return exp;
-                                }
-                            default:
-                                return null;
-                        }
-                    }
-                    else if (!callData.HaveParam()) {
-                        //退化
-                        valueData = callData.Name;
-                        return Load(valueData);
-                    }
-                    else {
-                        int paramClass = callData.GetParamClass();
-                        string op = callData.GetId();
-                        if (op == "=") {//赋值
-                            Dsl.CallData innerCall = callData.GetParam(0) as Dsl.CallData;
-                            if (null != innerCall) {
-                                //obj.property = val -> dotnetset(obj, property, val)
-                                int innerParamClass = innerCall.GetParamClass();
-                                if (innerParamClass == (int)Dsl.CallData.ParamClassEnum.PARAM_CLASS_PERIOD ||
-                                  innerParamClass == (int)Dsl.CallData.ParamClassEnum.PARAM_CLASS_BRACKET ||
-                                  innerParamClass == (int)Dsl.CallData.ParamClassEnum.PARAM_CLASS_PERIOD_BRACE ||
-                                  innerParamClass == (int)Dsl.CallData.ParamClassEnum.PARAM_CLASS_PERIOD_BRACKET ||
-                                  innerParamClass == (int)Dsl.CallData.ParamClassEnum.PARAM_CLASS_PERIOD_PARENTHESIS) {
-                                    Dsl.CallData newCall = new Dsl.CallData();
-                                    newCall.Name = new Dsl.ValueData("dotnetset", Dsl.ValueData.ID_TOKEN);
-                                    newCall.SetParamClass((int)Dsl.CallData.ParamClassEnum.PARAM_CLASS_PARENTHESIS);
-                                    if (innerCall.IsHighOrder) {
-                                        newCall.Params.Add(innerCall.Call);
-                                        newCall.Params.Add(ConvertMember(innerCall.GetParam(0), innerCall.GetParamClass()));
-                                        newCall.Params.Add(callData.GetParam(1));
+                Dsl.FunctionData funcData = comp as Dsl.FunctionData;
+                if (null != funcData) {
+                    if (funcData.HaveParam()) {
+                        var callData = funcData;
+                        if (!callData.HaveId() && !callData.IsHighOrder && (callData.GetParamClass() == (int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_PARENTHESIS || callData.GetParamClass() == (int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_BRACKET)) {
+                            switch (callData.GetParamClass()) {
+                                case (int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_PARENTHESIS:
+                                    int num = callData.GetParamNum();
+                                    if (num == 1) {
+                                        Dsl.ISyntaxComponent param = callData.GetParam(0);
+                                        return Load(param);
                                     }
                                     else {
-                                        newCall.Params.Add(innerCall.Name);
-                                        newCall.Params.Add(ConvertMember(innerCall.GetParam(0), innerCall.GetParamClass()));
-                                        newCall.Params.Add(callData.GetParam(1));
+                                        ParenthesisExp exp = new ParenthesisExp();
+                                        exp.Load(comp, this);
+                                        return exp;
                                     }
-
-                                    var setExp = new DotnetSetExp();
-                                    setExp.Load(newCall, this);
-                                    return setExp;
-                                }
+                                case (int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_BRACKET: {
+                                        ArrayExp exp = new ArrayExp();
+                                        exp.Load(comp, this);
+                                        return exp;
+                                    }
+                                default:
+                                    return null;
                             }
-                            IExpression exp = null;
-                            string name = callData.GetParamId(0);
-                            if (name == "var") {
-                                exp = new VarSet();
-                            }
-                            else {
-                                exp = new NamedVarSet();
-                            }
-                            if (null != exp) {
-                                exp.Load(comp, this);
-                            }
-                            else {
-                                //error
-                                //Debug.LogErrorFormat("DslCalculator error, {0} line {1}", callData.ToScriptString(false), callData.GetLine());
-                            }
-                            return exp;
+                        }
+                        else if (!callData.HaveParam()) {
+                            //退化
+                            valueData = callData.Name;
+                            return Load(valueData);
                         }
                         else {
-                            if (callData.IsHighOrder) {
-                                Dsl.CallData innerCall = callData.Call;
-                                int innerParamClass = innerCall.GetParamClass();
-                                if (paramClass == (int)Dsl.CallData.ParamClassEnum.PARAM_CLASS_PARENTHESIS && (
-                                    innerParamClass == (int)Dsl.CallData.ParamClassEnum.PARAM_CLASS_PERIOD ||
-                                    innerParamClass == (int)Dsl.CallData.ParamClassEnum.PARAM_CLASS_BRACKET ||
-                                    innerParamClass == (int)Dsl.CallData.ParamClassEnum.PARAM_CLASS_PERIOD_BRACE ||
-                                    innerParamClass == (int)Dsl.CallData.ParamClassEnum.PARAM_CLASS_PERIOD_BRACKET ||
-                                    innerParamClass == (int)Dsl.CallData.ParamClassEnum.PARAM_CLASS_PERIOD_PARENTHESIS)) {
-                                    //obj.member(a,b,...) or obj[member](a,b,...) or obj.(member)(a,b,...) or obj.[member](a,b,...) or obj.{member}(a,b,...) -> dotnetcall(obj,member,a,b,...)
-                                    string apiName;
-                                    string member = innerCall.GetParamId(0);
-                                    if (member == "orderby" || member == "orderbydesc" || member == "where" || member == "top") {
-                                        apiName = "linq";
-                                    }
-                                    else {
-                                        apiName = "dotnetcall";
-                                    }
-                                    Dsl.CallData newCall = new Dsl.CallData();
-                                    newCall.Name = new Dsl.ValueData(apiName, Dsl.ValueData.ID_TOKEN);
-                                    newCall.SetParamClass((int)Dsl.CallData.ParamClassEnum.PARAM_CLASS_PARENTHESIS);
-                                    if (innerCall.IsHighOrder) {
-                                        newCall.Params.Add(innerCall.Call);
-                                        newCall.Params.Add(ConvertMember(innerCall.GetParam(0), innerCall.GetParamClass()));
-                                        for (int i = 0; i < callData.GetParamNum(); ++i) {
-                                            Dsl.ISyntaxComponent p = callData.Params[i];
-                                            newCall.Params.Add(p);
+                            int paramClass = callData.GetParamClass();
+                            string op = callData.GetId();
+                            if (op == "=") {//赋值
+                                Dsl.FunctionData innerCall = callData.GetParam(0) as Dsl.FunctionData;
+                                if (null != innerCall) {
+                                    //obj.property = val -> dotnetset(obj, property, val)
+                                    int innerParamClass = innerCall.GetParamClass();
+                                    if (innerParamClass == (int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_PERIOD ||
+                                      innerParamClass == (int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_BRACKET ||
+                                      innerParamClass == (int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_PERIOD_BRACE ||
+                                      innerParamClass == (int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_PERIOD_BRACKET ||
+                                      innerParamClass == (int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_PERIOD_PARENTHESIS) {
+                                        Dsl.FunctionData newCall = new Dsl.FunctionData();
+                                        newCall.Name = new Dsl.ValueData("dotnetset", Dsl.ValueData.ID_TOKEN);
+                                        newCall.SetParamClass((int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_PARENTHESIS);
+                                        if (innerCall.IsHighOrder) {
+                                            newCall.Params.Add(innerCall.LowerOrderFunction);
+                                            newCall.Params.Add(ConvertMember(innerCall.GetParam(0), innerCall.GetParamClass()));
+                                            newCall.Params.Add(callData.GetParam(1));
                                         }
-                                    }
-                                    else {
-                                        newCall.Params.Add(innerCall.Name);
-                                        newCall.Params.Add(ConvertMember(innerCall.GetParam(0), innerCall.GetParamClass()));
-                                        for (int i = 0; i < callData.GetParamNum(); ++i) {
-                                            Dsl.ISyntaxComponent p = callData.Params[i];
-                                            newCall.Params.Add(p);
+                                        else {
+                                            newCall.Params.Add(innerCall.Name);
+                                            newCall.Params.Add(ConvertMember(innerCall.GetParam(0), innerCall.GetParamClass()));
+                                            newCall.Params.Add(callData.GetParam(1));
                                         }
-                                    }
 
-                                    if (apiName == "dotnetcall") {
-                                        var callExp = new DotnetCallExp();
-                                        callExp.Load(newCall, this);
-                                        return callExp;
-                                    }
-                                    else {
-                                        var callExp = new LinqExp();
-                                        callExp.Load(newCall, this);
-                                        return callExp;
+                                        var setExp = new DotnetSetExp();
+                                        setExp.Load(newCall, this);
+                                        return setExp;
                                     }
                                 }
-                            }
-                            if (paramClass == (int)Dsl.CallData.ParamClassEnum.PARAM_CLASS_PERIOD ||
-                              paramClass == (int)Dsl.CallData.ParamClassEnum.PARAM_CLASS_BRACKET ||
-                              paramClass == (int)Dsl.CallData.ParamClassEnum.PARAM_CLASS_PERIOD_BRACE ||
-                              paramClass == (int)Dsl.CallData.ParamClassEnum.PARAM_CLASS_PERIOD_BRACKET ||
-                              paramClass == (int)Dsl.CallData.ParamClassEnum.PARAM_CLASS_PERIOD_PARENTHESIS) {
-                                //obj.property or obj[property] or obj.(property) or obj.[property] or obj.{property} -> dotnetget(obj,property)
-                                Dsl.CallData newCall = new Dsl.CallData();
-                                newCall.Name = new Dsl.ValueData("dotnetget", Dsl.ValueData.ID_TOKEN);
-                                newCall.SetParamClass((int)Dsl.CallData.ParamClassEnum.PARAM_CLASS_PARENTHESIS);
-                                if (callData.IsHighOrder) {
-                                    newCall.Params.Add(callData.Call);
-                                    newCall.Params.Add(ConvertMember(callData.GetParam(0), callData.GetParamClass()));
+                                IExpression exp = null;
+                                string name = callData.GetParamId(0);
+                                if (name == "var") {
+                                    exp = new VarSet();
                                 }
                                 else {
-                                    newCall.Params.Add(callData.Name);
-                                    newCall.Params.Add(ConvertMember(callData.GetParam(0), callData.GetParamClass()));
+                                    exp = new NamedVarSet();
                                 }
+                                if (null != exp) {
+                                    exp.Load(comp, this);
+                                }
+                                else {
+                                    //error
+                                    Debug.LogWarningFormat("DslCalculator error, {0} line {1}", callData.ToScriptString(false), callData.GetLine());
+                                }
+                                return exp;
+                            }
+                            else {
+                                if (callData.IsHighOrder) {
+                                    Dsl.FunctionData innerCall = callData.LowerOrderFunction;
+                                    int innerParamClass = innerCall.GetParamClass();
+                                    if (paramClass == (int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_PARENTHESIS && (
+                                        innerParamClass == (int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_PERIOD ||
+                                        innerParamClass == (int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_BRACKET ||
+                                        innerParamClass == (int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_PERIOD_BRACE ||
+                                        innerParamClass == (int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_PERIOD_BRACKET ||
+                                        innerParamClass == (int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_PERIOD_PARENTHESIS)) {
+                                        //obj.member(a,b,...) or obj[member](a,b,...) or obj.(member)(a,b,...) or obj.[member](a,b,...) or obj.{member}(a,b,...) -> dotnetcall(obj,member,a,b,...)
+                                        string apiName;
+                                        string member = innerCall.GetParamId(0);
+                                        if (member == "orderby" || member == "orderbydesc" || member == "where" || member == "top") {
+                                            apiName = "linq";
+                                        }
+                                        else {
+                                            apiName = "dotnetcall";
+                                        }
+                                        Dsl.FunctionData newCall = new Dsl.FunctionData();
+                                        newCall.Name = new Dsl.ValueData(apiName, Dsl.ValueData.ID_TOKEN);
+                                        newCall.SetParamClass((int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_PARENTHESIS);
+                                        if (innerCall.IsHighOrder) {
+                                            newCall.Params.Add(innerCall.LowerOrderFunction);
+                                            newCall.Params.Add(ConvertMember(innerCall.GetParam(0), innerCall.GetParamClass()));
+                                            for (int i = 0; i < callData.GetParamNum(); ++i) {
+                                                Dsl.ISyntaxComponent p = callData.Params[i];
+                                                newCall.Params.Add(p);
+                                            }
+                                        }
+                                        else {
+                                            newCall.Params.Add(innerCall.Name);
+                                            newCall.Params.Add(ConvertMember(innerCall.GetParam(0), innerCall.GetParamClass()));
+                                            for (int i = 0; i < callData.GetParamNum(); ++i) {
+                                                Dsl.ISyntaxComponent p = callData.Params[i];
+                                                newCall.Params.Add(p);
+                                            }
+                                        }
 
-                                var getExp = new DotnetGetExp();
-                                getExp.Load(newCall, this);
-                                return getExp;
+                                        if (apiName == "dotnetcall") {
+                                            var callExp = new DotnetCallExp();
+                                            callExp.Load(newCall, this);
+                                            return callExp;
+                                        }
+                                        else {
+                                            var callExp = new LinqExp();
+                                            callExp.Load(newCall, this);
+                                            return callExp;
+                                        }
+                                    }
+                                }
+                                if (paramClass == (int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_PERIOD ||
+                                  paramClass == (int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_BRACKET ||
+                                  paramClass == (int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_PERIOD_BRACE ||
+                                  paramClass == (int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_PERIOD_BRACKET ||
+                                  paramClass == (int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_PERIOD_PARENTHESIS) {
+                                    //obj.property or obj[property] or obj.(property) or obj.[property] or obj.{property} -> dotnetget(obj,property)
+                                    Dsl.FunctionData newCall = new Dsl.FunctionData();
+                                    newCall.Name = new Dsl.ValueData("dotnetget", Dsl.ValueData.ID_TOKEN);
+                                    newCall.SetParamClass((int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_PARENTHESIS);
+                                    if (callData.IsHighOrder) {
+                                        newCall.Params.Add(callData.LowerOrderFunction);
+                                        newCall.Params.Add(ConvertMember(callData.GetParam(0), callData.GetParamClass()));
+                                    }
+                                    else {
+                                        newCall.Params.Add(callData.Name);
+                                        newCall.Params.Add(ConvertMember(callData.GetParam(0), callData.GetParamClass()));
+                                    }
+
+                                    var getExp = new DotnetGetExp();
+                                    getExp.Load(newCall, this);
+                                    return getExp;
+                                }
                             }
                         }
                     }
-                }
-                else {
-                    Dsl.FunctionData funcData = comp as Dsl.FunctionData;
-                    if (null != funcData) {
+                    else {
                         if (funcData.HaveStatement()) {
-                            callData = funcData.Call;
-                            if (null == callData || !callData.HaveId() && !callData.HaveParam()) {
+                            if (!funcData.HaveId() && !funcData.IsHighOrder) {
                                 HashtableExp exp = new HashtableExp();
                                 exp.Load(comp, this);
                                 return exp;
@@ -5693,20 +7069,37 @@ namespace DslExpression
                         }
                         else if (!funcData.HaveExternScript()) {
                             //退化
-                            callData = funcData.Call;
-                            if (callData.HaveParam()) {
-                                return Load(callData);
-                            }
-                            else {
-                                valueData = callData.Name;
-                                return Load(valueData);
-                            }
+                            valueData = funcData.Name;
+                            return Load(valueData);
                         }
                     }
                 }
             }
             IExpression ret = Create(comp.GetId());
             if (null != ret) {
+                Dsl.StatementData stData = comp as Dsl.StatementData;
+                if (null != stData) {
+                    Dsl.FunctionData first = stData.First;
+                    if(first.HaveId() && !first.HaveParamOrStatement()) {
+                        //将命令行语法转换为函数调用语法
+                        Dsl.FunctionData fd = new Dsl.FunctionData();
+                        fd.CopyFrom(first);
+                        for(int argi = 1; argi < stData.GetFunctionNum(); ++argi) {
+                            var pfd = stData.GetFunction(argi);
+                            if (pfd.HaveId() && !pfd.HaveParamOrStatement()) {
+                                fd.AddParam(pfd.Name);
+                            }
+                            else {
+                                fd.AddParam(pfd);
+                            }
+                        }
+                        if (!ret.Load(fd, this)) {
+                            //error
+                            Debug.LogWarningFormat("DslCalculator error, {0} line {1}", comp.ToScriptString(false), comp.GetLine());
+                        }
+                        return ret;
+                    }
+                }
                 if (!ret.Load(comp, this)) {
                     //error
                     Debug.LogErrorFormat("DslCalculator error, {0} line {1}", comp.ToScriptString(false), comp.GetLine());
@@ -5721,9 +7114,9 @@ namespace DslExpression
         private Dsl.ISyntaxComponent ConvertMember(Dsl.ISyntaxComponent p, int paramClass)
         {
             var pvd = p as Dsl.ValueData;
-            if (null != pvd && pvd.IsId() && (paramClass == (int)Dsl.CallData.ParamClassEnum.PARAM_CLASS_PERIOD
-                || paramClass == (int)Dsl.CallData.ParamClassEnum.PARAM_CLASS_POINTER
-                || paramClass == (int)Dsl.CallData.ParamClassEnum.PARAM_CLASS_QUESTION_PERIOD)) {
+            if (null != pvd && pvd.IsId() && (paramClass == (int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_PERIOD
+                || paramClass == (int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_POINTER
+                || paramClass == (int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_QUESTION_PERIOD)) {
                 pvd.SetType(Dsl.ValueData.STRING_TOKEN);
                 return pvd;
             }
@@ -5777,6 +7170,191 @@ namespace DslExpression
         private Stack<StackInfo> m_Stack = new Stack<StackInfo>();
         private Dictionary<string, object> m_NamedGlobalVariables = new Dictionary<string, object>();
         private Dictionary<string, IExpressionFactory> m_ExpressionFactories = new Dictionary<string, IExpressionFactory>();
+
+        internal static int CheckStartInterval
+        {
+            get { return s_CheckStartInterval; }
+            set { s_CheckStartInterval = value; }
+        }
+        internal static List<Task<int>> Tasks
+        {
+            get { return s_Tasks; }
+        }
+        internal static int NewProcess(bool noWait, string fileName, string args, ProcessStartOption option, Stream istream, Stream ostream, IList<string> input, StringBuilder output, StringBuilder error, bool redirectToConsole, Encoding encoding)
+        {
+            if (noWait) {
+                var task = Task.Run<int>(() => NewProcessTask(fileName, args, option, istream, ostream, input, output, error, redirectToConsole, encoding));
+                s_Tasks.Add(task);
+                while (task.Status == TaskStatus.Created || task.Status == TaskStatus.WaitingForActivation || task.Status == TaskStatus.WaitingToRun) {
+                    Debug.LogFormat("wait {0}[{1}] start", Path.GetFileName(fileName), task.Status);
+                    task.Wait(s_CheckStartInterval);
+                }
+                return 0;
+            }
+            else {
+                return NewProcessTask(fileName, args, option, istream, ostream, input, output, error, redirectToConsole, encoding);
+            }
+        }
+        private static int NewProcessTask(string fileName, string args, ProcessStartOption option, Stream istream, Stream ostream, IList<string> input, StringBuilder output, StringBuilder error, bool redirectToConsole, Encoding encoding)
+        {
+            //考虑到跨平台兼容性，不使用特定进程环境变量
+            try {
+                System.Diagnostics.Process p = new System.Diagnostics.Process();
+                var psi = p.StartInfo;
+                psi.FileName = fileName;
+                psi.Arguments = args;
+                psi.UseShellExecute = option.UseShellExecute;
+                if (null != option.Verb) {
+                    psi.Verb = option.Verb;
+                }
+                if (null != option.Domain) {
+                    psi.Domain = option.Domain;
+                }
+                if (null != option.UserName) {
+                    psi.UserName = option.UserName;
+                }
+                if (null != option.Password) {
+                    unsafe {
+                        fixed (char* pchar = option.Password.ToCharArray()) {
+                            psi.Password = new System.Security.SecureString(pchar, option.Password.Length);
+                        }
+                    }
+                }
+                if (null != option.PasswordInClearText) {
+                    psi.PasswordInClearText = option.PasswordInClearText;
+                }
+                psi.LoadUserProfile = option.LoadUserProfile;
+                psi.WindowStyle = option.WindowStyle;
+                psi.CreateNoWindow = !option.NewWindow;
+                psi.ErrorDialog = option.ErrorDialog;
+                psi.WorkingDirectory = option.WorkingDirectory;
+
+                if (null != istream || null != input) {
+                    psi.RedirectStandardInput = true;
+                }
+                if (null != ostream || null != output || redirectToConsole) {
+                    psi.RedirectStandardOutput = true;
+                    psi.StandardOutputEncoding = encoding;
+                    var tempStringBuilder = new StringBuilder();
+                    p.OutputDataReceived += (sender, e) => OnOutputDataReceived(sender, e, ostream, output, redirectToConsole, encoding, tempStringBuilder);
+                }
+                if (null != error || redirectToConsole) {
+                    psi.RedirectStandardError = true;
+                    psi.StandardErrorEncoding = encoding;
+                    var tempStringBuilder = new StringBuilder();
+                    p.ErrorDataReceived += (sender, e) => OnErrorDataReceived(sender, e, ostream, error, redirectToConsole, encoding, tempStringBuilder);
+                }
+                if (p.Start()) {
+                    if (psi.RedirectStandardInput) {
+                        if (null != istream) {
+                            istream.Seek(0, SeekOrigin.Begin);
+                            using (var sr = new StreamReader(istream, encoding, true, 1024, true)) {
+                                string line;
+                                while ((line = sr.ReadLine()) != null) {
+                                    p.StandardInput.WriteLine(line);
+                                    p.StandardInput.Flush();
+                                }
+                            }
+                            p.StandardInput.Close();
+                        }
+                        else if (null != input) {
+                            foreach (var line in input) {
+                                p.StandardInput.WriteLine(line);
+                                p.StandardInput.Flush();
+                            }
+                            p.StandardInput.Close();
+                        }
+                    }
+                    if (null != ostream) {
+                        ostream.Seek(0, SeekOrigin.Begin);
+                        ostream.SetLength(0);
+                    }
+                    if (psi.RedirectStandardOutput)
+                        p.BeginOutputReadLine();
+                    if (psi.RedirectStandardError)
+                        p.BeginErrorReadLine();
+                    p.WaitForExit();
+                    if (psi.RedirectStandardOutput) {
+                        p.CancelOutputRead();
+                    }
+                    if (psi.RedirectStandardError) {
+                        p.CancelErrorRead();
+                    }
+                    int r = p.ExitCode;
+                    p.Close();
+                    return r;
+                }
+                else {
+                    Debug.LogFormat("process({0} {1}) failed.", fileName, args);
+                    return -1;
+                }
+            }
+            catch (Exception ex) {
+                Debug.LogFormat("process({0} {1}) exception:{2} stack:{3}", fileName, args, ex.Message, ex.StackTrace);
+                while (null != ex.InnerException) {
+                    ex = ex.InnerException;
+                    Debug.LogFormat("\t=> exception:{0} stack:{1}", ex.Message, ex.StackTrace);
+                }
+                return -1;
+            }
+        }
+
+        private static void OnOutputDataReceived(object sender, System.Diagnostics.DataReceivedEventArgs e, Stream ostream, StringBuilder output, bool redirectToConsole, Encoding encoding, StringBuilder temp)
+        {
+            var p = sender as System.Diagnostics.Process;
+            if (p.StartInfo.RedirectStandardOutput) {
+                temp.Length = 0;
+                temp.AppendLine(e.Data);
+                var txt = temp.ToString();
+                if (null != ostream) {
+                    var bytes = encoding.GetBytes(txt);
+                    ostream.Write(bytes, 0, bytes.Length);
+                }
+                if (null != output) {
+                    output.Append(txt);
+                }
+                if (redirectToConsole) {
+                    Console.Write(txt);
+                }
+            }
+        }
+
+        private static void OnErrorDataReceived(object sender, System.Diagnostics.DataReceivedEventArgs e, Stream ostream, StringBuilder error, bool redirectToConsole, Encoding encoding, StringBuilder temp)
+        {
+            var p = sender as System.Diagnostics.Process;
+            if (p.StartInfo.RedirectStandardError) {
+                temp.Length = 0;
+                temp.AppendLine(e.Data);
+                var txt = temp.ToString();
+                if (null != ostream) {
+                    var bytes = encoding.GetBytes(txt);
+                    ostream.Write(bytes, 0, bytes.Length);
+                }
+                if (null != error) {
+                    error.Append(txt);
+                }
+                if (redirectToConsole) {
+                    Console.Write(txt);
+                }
+            }
+        }
+
+        internal class ProcessStartOption
+        {
+            internal bool UseShellExecute = false;
+            internal string Verb = null;
+            internal string Domain = null;
+            internal string UserName = null;
+            internal string Password = null;
+            internal string PasswordInClearText = null;
+            internal bool LoadUserProfile = false;
+            internal System.Diagnostics.ProcessWindowStyle WindowStyle = System.Diagnostics.ProcessWindowStyle.Normal;
+            internal bool NewWindow = false;
+            internal bool ErrorDialog = false;
+            internal string WorkingDirectory = Environment.CurrentDirectory;
+        }
+        private static List<Task<int>> s_Tasks = new List<Task<int>>();
+        private static int s_CheckStartInterval = 500;
     }
 }
 #endregion

@@ -80,11 +80,12 @@ public sealed class TerrainEditWindow : EditorWindow
 
                 m_Samplers.Clear();
                 foreach(var info in m_DslFile.DslInfos) {
-                    var func = info as Dsl.FunctionData;
-                    if (null == func)
+                    var dslInfo = info as Dsl.StatementData;
+                    if (null == dslInfo)
                         continue;
-                    foreach(var comp in func.Statements) {
-                        var callData = comp as Dsl.CallData;
+                    var func = dslInfo.First;
+                    foreach(var comp in func.Params) {
+                        var callData = comp as Dsl.FunctionData;
                         string id = callData.GetId();
                         if (id == "sampler") {
                             string key = callData.GetParamId(0);
@@ -372,8 +373,8 @@ internal static class TerrainEditUtility
             return;
         if (null != funcData) {
             if (type == "height") {
-                foreach (var comp in funcData.Statements) {
-                    var callData = comp as Dsl.CallData;
+                foreach (var comp in funcData.Params) {
+                    var callData = comp as Dsl.FunctionData;
                     if (null != callData) {
                         string id = callData.GetId();
                         if (id == "resettrees") {
@@ -396,8 +397,8 @@ internal static class TerrainEditUtility
                 }
             } else if (type == "alphamap") {
                 int alphanum = alphamaps.GetLength(2);
-                foreach (var comp in funcData.Statements) {
-                    var callData = comp as Dsl.CallData;
+                foreach (var comp in funcData.Params) {
+                    var callData = comp as Dsl.FunctionData;
                     if (null != callData) {
                         string id = callData.GetId();
                         if (id == "resettrees") {
@@ -419,8 +420,8 @@ internal static class TerrainEditUtility
                     }
                 }
             } else if (type == "detail") {
-                foreach (var comp in funcData.Statements) {
-                    var callData = comp as Dsl.CallData;
+                foreach (var comp in funcData.Params) {
+                    var callData = comp as Dsl.FunctionData;
                     if (null != callData) {
                         string id = callData.GetId();
                         if (id == "resettrees") {
