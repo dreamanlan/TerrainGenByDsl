@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using System.IO;
+using DslExpression;
 
 public sealed class TerrainEditWindow : EditorWindow
 {
@@ -290,19 +291,19 @@ internal static class TerrainEditUtility
             calc.Register("setcache", new DslExpression.ExpressionFactoryHelper<SetCacheExp>());
             calc.Register("addtree", new DslExpression.ExpressionFactoryHelper<AddTreeExp>());
             calc.Register("addobject", new DslExpression.ExpressionFactoryHelper<AddObjectExp>());
-            calc.SetGlobalVariable("samplers", samplers);
-            calc.SetGlobalVariable("caches", caches);
-            calc.SetGlobalVariable("trees", trees);
-            calc.SetGlobalVariable("objects", objects);
+            calc.SetGlobalVariable("samplers", CalculatorValue.FromObject(samplers));
+            calc.SetGlobalVariable("caches", CalculatorValue.FromObject(caches));
+            calc.SetGlobalVariable("trees", CalculatorValue.FromObject(trees));
+            calc.SetGlobalVariable("objects", CalculatorValue.FromObject(objects));
             calc.SetGlobalVariable("heightscalex", terrainData.heightmapScale.x);
             calc.SetGlobalVariable("heightscaley", terrainData.heightmapScale.y);
             calc.SetGlobalVariable("heightscalez", terrainData.heightmapScale.z);
-            calc.SetGlobalVariable("heights", datas);
-            calc.SetGlobalVariable("alphamaps", alphamaps);
-            calc.SetGlobalVariable("alphanum", alphanum);
-            calc.SetGlobalVariable("details", details);
+            calc.SetGlobalVariable("heights", CalculatorValue.FromObject(datas));
+            calc.SetGlobalVariable("alphamaps", CalculatorValue.FromObject(alphamaps));
+            calc.SetGlobalVariable("alphanum", CalculatorValue.FromObject(alphanum));
+            calc.SetGlobalVariable("details", CalculatorValue.FromObject(details));
             calc.SetGlobalVariable("height", 0.0f);
-            calc.SetGlobalVariable("alphas", new float[alphanum]);
+            calc.SetGlobalVariable("alphas", CalculatorValue.FromObject(new float[alphanum]));
             calc.SetGlobalVariable("detail", 0);
             bool resetTrees = false;
             bool canContinue = true;
@@ -454,7 +455,7 @@ internal static class TerrainEditUtility
                 int yi = y + iy;
                 calc.SetGlobalVariable("height", datas[yi, xi]);
                 calc.Calc(proc, xi, yi);
-                datas[yi, xi] = (float)Convert.ChangeType(calc.GetGlobalVariable("height"), typeof(float));
+                datas[yi, xi] = calc.GetGlobalVariable("height").Get<float>();
             }
 
             if (DisplayCancelableProgressBar("生成高度与对象数据", ix * h, w * h))
@@ -479,7 +480,7 @@ internal static class TerrainEditUtility
                 if (dx * dx + dy * dy <= r2) {
                     calc.SetGlobalVariable("height", datas[yi, xi]);
                     calc.Calc(proc, xi, yi);
-                    datas[yi, xi] = (float)Convert.ChangeType(calc.GetGlobalVariable("height"), typeof(float));
+                    datas[yi, xi] = calc.GetGlobalVariable("height").Get<float>();
                 }
             }
 
@@ -496,7 +497,7 @@ internal static class TerrainEditUtility
             for (int iy = 0; iy < h; ++iy) {
                 int xi = x + ix;
                 int yi = y + iy;
-                float[] alphas = calc.GetGlobalVariable("alphas") as float[];
+                float[] alphas = calc.GetGlobalVariable("alphas").As<float[]>();
                 for (int i = 0; i < alphanum; ++i) {
                     alphas[i] = alphamaps[xi, yi, i];
                 }
@@ -527,7 +528,7 @@ internal static class TerrainEditUtility
                 int dx = xi - cx;
                 int dy = yi - cy;
                 if (dx * dx + dy * dy <= r2) {
-                    float[] alphas = calc.GetGlobalVariable("alphas") as float[];
+                    float[] alphas = calc.GetGlobalVariable("alphas").As<float[]>();
                     for (int i = 0; i < alphanum; ++i) {
                         alphas[i] = alphamaps[xi, yi, i];
                     }
@@ -555,7 +556,7 @@ internal static class TerrainEditUtility
                     var detail = pair.Value[xi, yi];
                     calc.SetGlobalVariable("detail", detail);
                     calc.Calc(proc, xi, yi, layer);
-                    pair.Value[xi, yi] = (int)Convert.ChangeType(calc.GetGlobalVariable("detail"), typeof(int));
+                    pair.Value[xi, yi] = calc.GetGlobalVariable("detail").Get<int>();
                 }
             }
 
@@ -584,7 +585,7 @@ internal static class TerrainEditUtility
                         var detail = pair.Value[xi, yi];
                         calc.SetGlobalVariable("detail", detail);
                         calc.Calc(proc, xi, yi, layer);
-                        pair.Value[xi, yi] = (int)Convert.ChangeType(calc.GetGlobalVariable("detail"), typeof(int));
+                        pair.Value[xi, yi] = calc.GetGlobalVariable("detail").Get<int>();
                     }
                 }
             }
@@ -795,13 +796,13 @@ internal static class TerrainEditUtility
 
 internal class GetHeightExp : DslExpression.SimpleExpressionBase
 {
-    protected override object OnCalc(IList<object> operands)
+    protected override CalculatorValue OnCalc(IList<CalculatorValue> operands)
     {
-        object r = null;
+        float r = 0;
         if (operands.Count >= 2) {
-            var datas = Calculator.GetGlobalVariable("heights") as float[,];
-            var x = ToLong(operands[0]);
-            var y = ToLong(operands[1]);
+            var datas = Calculator.GetGlobalVariable("heights").As<float[,]>();
+            var x = operands[0].Get<long>();
+            var y = operands[1].Get<long>();
             r = datas[y, x];
         }
         return r;
@@ -809,14 +810,14 @@ internal class GetHeightExp : DslExpression.SimpleExpressionBase
 }
 internal class GetAlphamapExp : DslExpression.SimpleExpressionBase
 {
-    protected override object OnCalc(IList<object> operands)
+    protected override CalculatorValue OnCalc(IList<CalculatorValue> operands)
     {
-        object r = null;
+        float r = 0;
         if (operands.Count >= 3) {
-            var datas = Calculator.GetGlobalVariable("alphamaps") as float[, ,];
-            var x = ToLong(operands[0]);
-            var y = ToLong(operands[1]);
-            var ix = ToLong(operands[2]);
+            var datas = Calculator.GetGlobalVariable("alphamaps").As<float[, ,]>();
+            var x = operands[0].Get<long>();
+            var y = operands[1].Get<long>();
+            var ix = operands[2].Get<long>();
             r = datas[x, y, ix];
         }
         return r;
@@ -824,12 +825,12 @@ internal class GetAlphamapExp : DslExpression.SimpleExpressionBase
 }
 internal class GetAlphaExp : DslExpression.SimpleExpressionBase
 {
-    protected override object OnCalc(IList<object> operands)
+    protected override CalculatorValue OnCalc(IList<CalculatorValue> operands)
     {
-        object r = null;
+        float r = 0;
         if (operands.Count >= 1) {
-            var datas = Calculator.GetGlobalVariable("alphas") as float[];
-            var ix = ToLong(operands[0]);
+            var datas = Calculator.GetGlobalVariable("alphas").As<float[]>();
+            var ix = operands[0].Get<long>();
             r = datas[ix];
         }
         return r;
@@ -837,13 +838,13 @@ internal class GetAlphaExp : DslExpression.SimpleExpressionBase
 }
 internal class SetAlphaExp : DslExpression.SimpleExpressionBase
 {
-    protected override object OnCalc(IList<object> operands)
+    protected override CalculatorValue OnCalc(IList<CalculatorValue> operands)
     {
-        object r = null;
+        double r = 0;
         if (operands.Count >= 2) {
-            var datas = Calculator.GetGlobalVariable("alphas") as float[];
-            var ix = ToLong(operands[0]);
-            var v = ToDouble(operands[1]);
+            var datas = Calculator.GetGlobalVariable("alphas").As<float[]>();
+            var ix = operands[0].Get<long>();
+            var v = operands[1].Get<double>();
             datas[ix] = (float)v;
             r = v;
         }
@@ -852,14 +853,14 @@ internal class SetAlphaExp : DslExpression.SimpleExpressionBase
 }
 internal class GetDetailExp : DslExpression.SimpleExpressionBase
 {
-    protected override object OnCalc(IList<object> operands)
+    protected override CalculatorValue OnCalc(IList<CalculatorValue> operands)
     {
-        object r = null;
+        int r = 0;
         if (operands.Count >= 3) {
-            var datas = Calculator.GetGlobalVariable("details") as Dictionary<int, int[,]>;
-            var x = ToLong(operands[0]);
-            var y = ToLong(operands[1]);
-            var ix = ToLong(operands[2]);
+            var datas = Calculator.GetGlobalVariable("details").As<Dictionary<int, int[,]>>();
+            var x = operands[0].Get<long>();
+            var y = operands[1].Get<long>();
+            var ix = operands[2].Get<long>();
             int[,] v;
             if (datas.TryGetValue((int)ix, out v)) {
                 r = v[x, y];
@@ -870,14 +871,14 @@ internal class GetDetailExp : DslExpression.SimpleExpressionBase
 }
 internal class SampleRedExp : DslExpression.SimpleExpressionBase
 {
-    protected override object OnCalc(IList<object> operands)
+    protected override CalculatorValue OnCalc(IList<CalculatorValue> operands)
     {
-        object r = 0;
+        int r = 0;
         if (operands.Count >= 3) {
-            var datas = Calculator.GetGlobalVariable("samplers") as Dictionary<string, Color32[,]>;
-            var key = operands[0] as string;
-            var x = ToLong(operands[1]);
-            var y = ToLong(operands[2]);
+            var datas = Calculator.GetGlobalVariable("samplers").As<Dictionary<string, Color32[,]>>();
+            var key = operands[0].AsString;
+            var x = operands[1].Get<long>();
+            var y = operands[2].Get<long>();
             Color32[,] colors;
             if (datas.TryGetValue(key, out colors)) {
                 if (x >= 0 && x < colors.GetLength(0)) {
@@ -892,14 +893,14 @@ internal class SampleRedExp : DslExpression.SimpleExpressionBase
 }
 internal class SampleGreenExp : DslExpression.SimpleExpressionBase
 {
-    protected override object OnCalc(IList<object> operands)
+    protected override CalculatorValue OnCalc(IList<CalculatorValue> operands)
     {
-        object r = 0;
+        int r = 0;
         if (operands.Count >= 3) {
-            var datas = Calculator.GetGlobalVariable("samplers") as Dictionary<string, Color32[,]>;
-            var key = operands[0] as string;
-            var x = ToLong(operands[1]);
-            var y = ToLong(operands[2]);
+            var datas = Calculator.GetGlobalVariable("samplers").As<Dictionary<string, Color32[,]>>();
+            var key = operands[0].AsString;
+            var x = operands[1].Get<long>();
+            var y = operands[2].Get<long>();
             Color32[,] colors;
             if (datas.TryGetValue(key, out colors)) {
                 if (x >= 0 && x < colors.GetLength(0)) {
@@ -914,14 +915,14 @@ internal class SampleGreenExp : DslExpression.SimpleExpressionBase
 }
 internal class SampleBlueExp : DslExpression.SimpleExpressionBase
 {
-    protected override object OnCalc(IList<object> operands)
+    protected override CalculatorValue OnCalc(IList<CalculatorValue> operands)
     {
-        object r = 0;
+        int r = 0;
         if (operands.Count >= 3) {
-            var datas = Calculator.GetGlobalVariable("samplers") as Dictionary<string, Color32[,]>;
-            var key = operands[0] as string;
-            var x = ToLong(operands[1]);
-            var y = ToLong(operands[2]);
+            var datas = Calculator.GetGlobalVariable("samplers").As<Dictionary<string, Color32[,]>>();
+            var key = operands[0].AsString;
+            var x = operands[1].Get<long>();
+            var y = operands[2].Get<long>();
             Color32[,] colors;
             if (datas.TryGetValue(key, out colors)) {
                 if (x >= 0 && x < colors.GetLength(0)) {
@@ -936,14 +937,14 @@ internal class SampleBlueExp : DslExpression.SimpleExpressionBase
 }
 internal class SampleAlphaExp : DslExpression.SimpleExpressionBase
 {
-    protected override object OnCalc(IList<object> operands)
+    protected override CalculatorValue OnCalc(IList<CalculatorValue> operands)
     {
-        object r = 0;
+        int r = 0;
         if (operands.Count >= 3) {
-            var datas = Calculator.GetGlobalVariable("samplers") as Dictionary<string, Color32[,]>;
-            var key = operands[0] as string;
-            var x = ToLong(operands[1]);
-            var y = ToLong(operands[2]);
+            var datas = Calculator.GetGlobalVariable("samplers").As<Dictionary<string, Color32[,]>>();
+            var key = operands[0].AsString;
+            var x = operands[1].Get<long>();
+            var y = operands[2].Get<long>();
             Color32[,] colors;
             if (datas.TryGetValue(key, out colors)) {
                 if (x >= 0 && x < colors.GetLength(0)) {
@@ -958,14 +959,14 @@ internal class SampleAlphaExp : DslExpression.SimpleExpressionBase
 }
 internal class GetCacheExp : DslExpression.SimpleExpressionBase
 {
-    protected override object OnCalc(IList<object> operands)
+    protected override CalculatorValue OnCalc(IList<CalculatorValue> operands)
     {
-        object r = 0;
+        int r = 0;
         if (operands.Count >= 3) {
-            var datas = Calculator.GetGlobalVariable("caches") as Dictionary<string, int[,]>;
-            var key = operands[0] as string;
-            var x = ToLong(operands[1]);
-            var y = ToLong(operands[2]);
+            var datas = Calculator.GetGlobalVariable("caches").As<Dictionary<string, int[,]>>();
+            var key = operands[0].AsString;
+            var x = operands[1].Get<long>();
+            var y = operands[2].Get<long>();
             int[,] vals;
             if (datas.TryGetValue(key, out vals)) {
                 if (x >= 0 && x < vals.GetLength(0)) {
@@ -980,15 +981,15 @@ internal class GetCacheExp : DslExpression.SimpleExpressionBase
 }
 internal class SetCacheExp : DslExpression.SimpleExpressionBase
 {
-    protected override object OnCalc(IList<object> operands)
+    protected override CalculatorValue OnCalc(IList<CalculatorValue> operands)
     {
-        object r = 0;
+        long r = 0;
         if (operands.Count >= 4) {
-            var datas = Calculator.GetGlobalVariable("caches") as Dictionary<string, int[,]>;
-            var key = operands[0] as string;
-            var x = ToLong(operands[1]);
-            var y = ToLong(operands[2]);
-            var v = ToLong(operands[3]);
+            var datas = Calculator.GetGlobalVariable("caches").As<Dictionary<string, int[,]>>();
+            var key = operands[0].AsString;
+            var x = operands[1].Get<long>();
+            var y = operands[2].Get<long>();
+            var v = operands[3].Get<long>();
             int[,] vals;
             if (datas.TryGetValue(key, out vals)) {
                 if (x >= 0 && x < vals.GetLength(0)) {
@@ -1004,20 +1005,20 @@ internal class SetCacheExp : DslExpression.SimpleExpressionBase
 }
 internal class AddTreeExp : DslExpression.SimpleExpressionBase
 {
-    protected override object OnCalc(IList<object> operands)
+    protected override CalculatorValue OnCalc(IList<CalculatorValue> operands)
     {
-        object r = 0;
+        long r = 0;
         if (operands.Count >= 9) {
-            var trees = Calculator.GetGlobalVariable("trees") as List<TreeInstance>;
-            var ix = ToLong(operands[0]);
-            var x = ToDouble(operands[1]);
-            var y = ToDouble(operands[2]);
-            var z = ToDouble(operands[3]);
-            var rot = ToDouble(operands[4]);
-            var w_scale = ToDouble(operands[5]);
-            var h_scale = ToDouble(operands[6]);
-            var color = (uint)ToLong(operands[7]);
-            var lightmap = (uint)ToLong(operands[8]);
+            var trees = Calculator.GetGlobalVariable("trees").As<List<TreeInstance>>();
+            var ix = operands[0].Get<long>();
+            var x = operands[1].Get<double>();
+            var y = operands[2].Get<double>();
+            var z = operands[3].Get<double>();
+            var rot = operands[4].Get<double>();
+            var w_scale = operands[5].Get<double>();
+            var h_scale = operands[6].Get<double>();
+            var color = operands[7].Get<uint>();
+            var lightmap = operands[8].Get<uint>();
             if (null != trees) {
                 Color32 c = new Color32((byte)((color & 0xff000000) >> 24), (byte)((color & 0xff0000) >> 16), (byte)((color & 0xff00) >> 8), (byte)(color & 0xff));
                 Color32 l = new Color32((byte)((lightmap & 0xff000000) >> 24), (byte)((lightmap & 0xff0000) >> 16), (byte)((lightmap & 0xff00) >> 8), (byte)(lightmap & 0xff));
@@ -1030,15 +1031,15 @@ internal class AddTreeExp : DslExpression.SimpleExpressionBase
 }
 internal class AddObjectExp : DslExpression.SimpleExpressionBase
 {
-    protected override object OnCalc(IList<object> operands)
+    protected override CalculatorValue OnCalc(IList<CalculatorValue> operands)
     {
-        object r = 0;
+        string r = string.Empty;
         if (operands.Count >= 4) {
-            var objects = Calculator.GetGlobalVariable("objects") as List<ObjectInfo>;
-            var x = ToFloat(operands[0]);
-            var y = ToFloat(operands[1]);
-            var z = ToFloat(operands[2]);
-            var m = ToString(operands[3]);
+            var objects = Calculator.GetGlobalVariable("objects").As<List<ObjectInfo>>();
+            var x = operands[0].Get<float>();
+            var y = operands[1].Get<float>();
+            var z = operands[2].Get<float>();
+            var m = operands[3].AsString;
             if (null != objects && objects.Count < TerrainEditUtility.MaxObjectCount) {
                 objects.Add(new ObjectInfo { X = x, Y = y, Z = z, Prefab = m });
             }
