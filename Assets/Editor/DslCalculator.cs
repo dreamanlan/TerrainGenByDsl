@@ -3115,7 +3115,7 @@ namespace DslExpression
             }
             else {
                 //error
-                Debug.LogErrorFormat("DslCalculator error, {0} line {1}", statementData.ToScriptString(false), statementData.GetLine());
+                Calculator.Log("DslCalculator error, {0} line {1}", statementData.ToScriptString(false), statementData.GetLine());
             }
             return true;
         }
@@ -3169,7 +3169,7 @@ namespace DslExpression
             }
             else {
                 //error
-                Debug.LogErrorFormat("DslCalculator error, {0} line {1}", funcData.ToScriptString(false), funcData.GetLine());
+                Calculator.Log("DslCalculator error, {0} line {1}", funcData.ToScriptString(false), funcData.GetLine());
             }
             return true;
         }
@@ -3191,7 +3191,7 @@ namespace DslExpression
                     }
                     else {
                         //error
-                        Debug.LogErrorFormat("DslCalculator error, {0} line {1}", first.ToScriptString(false), first.GetLine());
+                        Calculator.Log("DslCalculator error, {0} line {1}", first.ToScriptString(false), first.GetLine());
                     }
                     IExpression subExp = Calculator.Load(second);
                     item.Expressions.Add(subExp);
@@ -3209,7 +3209,7 @@ namespace DslExpression
                     }
                     else {
                         //error
-                        Debug.LogErrorFormat("DslCalculator error, {0} line {1}", fData.ToScriptString(false), fData.GetLine());
+                        Calculator.Log("DslCalculator error, {0} line {1}", fData.ToScriptString(false), fData.GetLine());
                     }
                     for (int ix = 0; ix < fData.GetParamNum(); ++ix) {
                         IExpression subExp = Calculator.Load(fData.GetParam(ix));
@@ -3220,7 +3220,7 @@ namespace DslExpression
                 else if (fData.GetId() == "else") {
                     if (fData != statementData.Last) {
                         //error
-                        Debug.LogErrorFormat("DslCalculator error, {0} line {1}", fData.ToScriptString(false), fData.GetLine());
+                        Calculator.Log("DslCalculator error, {0} line {1}", fData.ToScriptString(false), fData.GetLine());
                     }
                     else {
                         IfExp.Clause item = new IfExp.Clause();
@@ -3233,7 +3233,7 @@ namespace DslExpression
                 }
                 else {
                     //error
-                    Debug.LogErrorFormat("DslCalculator error, {0} line {1}", fData.ToScriptString(false), fData.GetLine());
+                    Calculator.Log("DslCalculator error, {0} line {1}", fData.ToScriptString(false), fData.GetLine());
                 }
             }
             return true;
@@ -3286,7 +3286,7 @@ namespace DslExpression
             }
             else {
                 //error
-                Debug.LogErrorFormat("DslCalculator error, {0} line {1}", funcData.ToScriptString(false), funcData.GetLine());
+                Calculator.Log("DslCalculator error, {0} line {1}", funcData.ToScriptString(false), funcData.GetLine());
             }
             return true;
         }
@@ -3306,7 +3306,7 @@ namespace DslExpression
                     }
                     else {
                         //error
-                        Debug.LogErrorFormat("DslCalculator error, {0} line {1}", first.ToScriptString(false), first.GetLine());
+                        Calculator.Log("DslCalculator error, {0} line {1}", first.ToScriptString(false), first.GetLine());
                     }
                     IExpression subExp = Calculator.Load(second);
                     m_Expressions.Add(subExp);
@@ -3355,7 +3355,7 @@ namespace DslExpression
             }
             else {
                 //error
-                Debug.LogErrorFormat("DslCalculator error, {0} line {1}", funcData.ToScriptString(false), funcData.GetLine());
+                Calculator.Log("DslCalculator error, {0} line {1}", funcData.ToScriptString(false), funcData.GetLine());
             }
             return true;
         }
@@ -3375,7 +3375,7 @@ namespace DslExpression
                     }
                     else {
                         //error
-                        Debug.LogErrorFormat("DslCalculator error, {0} line {1}", first.ToScriptString(false), first.GetLine());
+                        Calculator.Log("DslCalculator error, {0} line {1}", first.ToScriptString(false), first.GetLine());
                     }
                     IExpression subExp = Calculator.Load(second);
                     m_Expressions.Add(subExp);
@@ -3428,7 +3428,7 @@ namespace DslExpression
             }
             else {
                 //error
-                Debug.LogErrorFormat("DslCalculator error, {0} line {1}", funcData.ToScriptString(false), funcData.GetLine());
+                Calculator.Log("DslCalculator error, {0} line {1}", funcData.ToScriptString(false), funcData.GetLine());
             }
             return true;
         }
@@ -3448,7 +3448,7 @@ namespace DslExpression
                     }
                     else {
                         //error
-                        Debug.LogErrorFormat("DslCalculator error, {0} line {1}", first.ToScriptString(false), first.GetLine());
+                        Calculator.Log("DslCalculator error, {0} line {1}", first.ToScriptString(false), first.GetLine());
                     }
                     IExpression subExp = Calculator.Load(second);
                     m_Expressions.Add(subExp);
@@ -3528,7 +3528,7 @@ namespace DslExpression
                     }
                     else {
                         //error
-                        Debug.LogErrorFormat("DslCalculator error, {0} line {1}", first.ToScriptString(false), first.GetLine());
+                        Calculator.Log("DslCalculator error, {0} line {1}", first.ToScriptString(false), first.GetLine());
                     }
                     IExpression subExp = Calculator.Load(second);
                     m_Expressions.Add(subExp);
@@ -3603,7 +3603,7 @@ namespace DslExpression
                     ret = obj.GetType().AssemblyQualifiedName;
                 }
                 catch (Exception ex) {
-                    Debug.LogWarningFormat("Exception:{0}\n{1}", ex.Message, ex.StackTrace);
+                    Calculator.Log("Exception:{0}\n{1}", ex.Message, ex.StackTrace);
                 }
             }
             return ret;
@@ -3630,7 +3630,7 @@ namespace DslExpression
                     ret = obj.GetType().FullName;
                 }
                 catch (Exception ex) {
-                    Debug.LogWarningFormat("Exception:{0}\n{1}", ex.Message, ex.StackTrace);
+                    Calculator.Log("Exception:{0}\n{1}", ex.Message, ex.StackTrace);
                 }
             }
             return ret;
@@ -3657,7 +3657,7 @@ namespace DslExpression
                     ret = obj.GetType().Name;
                 }
                 catch (Exception ex) {
-                    Debug.LogWarningFormat("Exception:{0}\n{1}", ex.Message, ex.StackTrace);
+                    Calculator.Log("Exception:{0}\n{1}", ex.Message, ex.StackTrace);
                 }
             }
             return ret;
@@ -3695,14 +3695,14 @@ namespace DslExpression
                         r = Type.GetType(type);
                     }
                     if (null == r) {
-                        Debug.LogWarningFormat("null == Type.GetType({0})", type);
+                        Calculator.Log("null == Type.GetType({0})", type);
                     }
                     else {
                         ret = CalculatorValue.FromObject(r);
                     }
                 }
                 catch (Exception ex) {
-                    Debug.LogWarningFormat("Exception:{0}\n{1}", ex.Message, ex.StackTrace);
+                    Calculator.Log("Exception:{0}\n{1}", ex.Message, ex.StackTrace);
                 }
             }
             return ret;
@@ -3727,66 +3727,128 @@ namespace DslExpression
                 var obj = m_Expressions[0].Calc();
                 string type = m_Expressions[1].Calc().AsString;
                 try {
-                    if (0 == type.CompareTo("sbyte")) {
-                        ret = obj.Get<sbyte>();
-                    }
-                    else if (0 == type.CompareTo("byte")) {
-                        ret = obj.Get<byte>();
-                    }
-                    else if (0 == type.CompareTo("short")) {
-                        ret = obj.Get<short>();
-                    }
-                    else if (0 == type.CompareTo("ushort")) {
-                        ret = obj.Get<ushort>();
-                    }
-                    else if (0 == type.CompareTo("int")) {
-                        ret = obj.Get<int>();
-                    }
-                    else if (0 == type.CompareTo("uint")) {
-                        ret = obj.Get<uint>();
-                    }
-                    else if (0 == type.CompareTo("long")) {
-                        ret = obj.Get<long>();
-                    }
-                    else if (0 == type.CompareTo("ulong")) {
-                        ret = obj.Get<ulong>();
-                    }
-                    else if (0 == type.CompareTo("float")) {
-                        ret = obj.Get<float>();
-                    }
-                    else if (0 == type.CompareTo("double")) {
-                        ret = obj.Get<double>();
-                    }
-                    else if (0 == type.CompareTo("string")) {
-                        ret = obj.Get<string>();
-                    }
-                    else if (0 == type.CompareTo("bool")) {
-                        ret = obj.Get<bool>();
+                    string str = obj.AsString;
+                    if (obj.IsString) {
+                        if (0 == type.CompareTo("sbyte")) {
+                            ret = CastTo<sbyte>(str);
+                        }
+                        else if (0 == type.CompareTo("byte")) {
+                            ret = CastTo<byte>(str);
+                        }
+                        else if (0 == type.CompareTo("short")) {
+                            ret = CastTo<short>(str);
+                        }
+                        else if (0 == type.CompareTo("ushort")) {
+                            ret = CastTo<ushort>(str);
+                        }
+                        else if (0 == type.CompareTo("int")) {
+                            ret = CastTo<int>(str);
+                        }
+                        else if (0 == type.CompareTo("uint")) {
+                            ret = CastTo<uint>(str);
+                        }
+                        else if (0 == type.CompareTo("long")) {
+                            ret = CastTo<long>(str);
+                        }
+                        else if (0 == type.CompareTo("ulong")) {
+                            ret = CastTo<ulong>(str);
+                        }
+                        else if (0 == type.CompareTo("float")) {
+                            ret = CastTo<float>(str);
+                        }
+                        else if (0 == type.CompareTo("double")) {
+                            ret = CastTo<double>(str);
+                        }
+                        else if (0 == type.CompareTo("string")) {
+                            ret = str;
+                        }
+                        else if (0 == type.CompareTo("bool")) {
+                            ret = CastTo<bool>(str);
+                        }
+                        else {                            
+	                        Type t = Type.GetType("UnityEngine." + type + ", UnityEngine");
+	                        if (null == t) {
+	                            t = Type.GetType("UnityEngine.UI." + type + ", UnityEngine.UI");
+	                        }
+	                        if (null == t) {
+	                            t = Type.GetType("UnityEditor." + type + ", UnityEditor");
+	                        }
+	                        if (null == t) {
+	                            t = Type.GetType(type + ", Assembly-CSharp");
+	                        }
+	                        if (null == t) {
+	                            t = Type.GetType(type);
+	                        }
+                            if (null != t) {
+                                ret = CalculatorValue.FromObject(CastTo(t, str));
+                            }
+                            else {
+                                Calculator.Log("null == Type.GetType({0})", type);
+                            }
+                        }
                     }
                     else {
-                        Type t = Type.GetType("UnityEngine." + type + ", UnityEngine");
-                        if (null == t) {
-                            t = Type.GetType("UnityEngine.UI." + type + ", UnityEngine.UI");
+                        if (0 == type.CompareTo("sbyte")) {
+                            ret = obj.Get<sbyte>();
                         }
-                        if (null == t) {
-                            t = Type.GetType("UnityEditor." + type + ", UnityEditor");
+                        else if (0 == type.CompareTo("byte")) {
+                            ret = obj.Get<byte>();
                         }
-                        if (null == t) {
-                            t = Type.GetType(type + ", Assembly-CSharp");
+                        else if (0 == type.CompareTo("short")) {
+                            ret = obj.Get<short>();
                         }
-                        if (null == t) {
-                            t = Type.GetType(type);
+                        else if (0 == type.CompareTo("ushort")) {
+                            ret = obj.Get<ushort>();
                         }
-                        if (null != t) {
-                            ret = CalculatorValue.FromObject(obj.Get(t));
+                        else if (0 == type.CompareTo("int")) {
+                            ret = obj.Get<int>();
                         }
-                        else {
-                            Debug.LogWarningFormat("null == Type.GetType({0})", type);
+                        else if (0 == type.CompareTo("uint")) {
+                            ret = obj.Get<uint>();
                         }
-                    }
+                        else if (0 == type.CompareTo("long")) {
+                            ret = obj.Get<long>();
+                        }
+                        else if (0 == type.CompareTo("ulong")) {
+                            ret = obj.Get<ulong>();
+                        }
+                        else if (0 == type.CompareTo("float")) {
+                            ret = obj.Get<float>();
+                        }
+                        else if (0 == type.CompareTo("double")) {
+                            ret = obj.Get<double>();
+                        }
+                        else if (0 == type.CompareTo("string")) {
+                            ret = obj.Get<string>();
+                        }
+                        else if (0 == type.CompareTo("bool")) {
+                            ret = obj.Get<bool>();
+	                    }
+	                    else {
+	                        Type t = Type.GetType("UnityEngine." + type + ", UnityEngine");
+	                        if (null == t) {
+	                            t = Type.GetType("UnityEngine.UI." + type + ", UnityEngine.UI");
+	                        }
+	                        if (null == t) {
+	                            t = Type.GetType("UnityEditor." + type + ", UnityEditor");
+	                        }
+	                        if (null == t) {
+	                            t = Type.GetType(type + ", Assembly-CSharp");
+	                        }
+	                        if (null == t) {
+	                            t = Type.GetType(type);
+	                        }
+	                        if (null != t) {
+	                            ret = CalculatorValue.FromObject(obj.Get(t));
+	                        }
+	                        else {
+	                            Calculator.Log("null == Type.GetType({0})", type);
+	                        }
+	                    }
+					}
                 }
                 catch (Exception ex) {
-                    Debug.LogWarningFormat("Exception:{0}\n{1}", ex.Message, ex.StackTrace);
+                    Calculator.Log("Exception:{0}\n{1}", ex.Message, ex.StackTrace);
                 }
             }
             return ret;
@@ -3828,11 +3890,11 @@ namespace DslExpression
                         ret = CalculatorValue.FromObject(Enum.Parse(t, val, true));
                     }
                     else {
-                        Debug.LogWarningFormat("null == Type.GetType({0})", type);
+                        Calculator.Log("null == Type.GetType({0})", type);
                     }
                 }
                 catch (Exception ex) {
-                    Debug.LogWarningFormat("Exception:{0}\n{1}", ex.Message, ex.StackTrace);
+                    Calculator.Log("Exception:{0}\n{1}", ex.Message, ex.StackTrace);
                 }
             }
             return ret;
@@ -3890,7 +3952,7 @@ namespace DslExpression
                                 ret = CalculatorValue.FromObject(t.InvokeMember(method, flags, null, null, _args));
                             }
                             catch (Exception ex) {
-                                Console.WriteLine("Exception:{0}\n{1}", ex.Message, ex.StackTrace);
+                                Calculator.Log("Exception:{0}\n{1}", ex.Message, ex.StackTrace);
                             }
                         }
                         else {
@@ -3902,7 +3964,7 @@ namespace DslExpression
                                     ret = CalculatorValue.FromObject(t.InvokeMember(method, flags, null, obj, _args));
                                 }
                                 catch (Exception ex) {
-                                    Debug.LogWarningFormat("Exception:{0}\n{1}", ex.Message, ex.StackTrace);
+                                    Calculator.Log("Exception:{0}\n{1}", ex.Message, ex.StackTrace);
                                 }
                             }
                         }
@@ -3984,7 +4046,7 @@ namespace DslExpression
                                 ret = CalculatorValue.FromObject(t.InvokeMember(method, flags, null, null, _args));
                             }
                             catch (Exception ex) {
-                                Debug.LogWarningFormat("Exception:{0}\n{1}", ex.Message, ex.StackTrace);
+                                Calculator.Log("Exception:{0}\n{1}", ex.Message, ex.StackTrace);
                             }
                         }
                         else {
@@ -3996,7 +4058,7 @@ namespace DslExpression
                                     ret = CalculatorValue.FromObject(t.InvokeMember(method, flags, null, obj, _args));
                                 }
                                 catch (Exception ex) {
-                                    Debug.LogWarningFormat("Exception:{0}\n{1}", ex.Message, ex.StackTrace);
+                                    Calculator.Log("Exception:{0}\n{1}", ex.Message, ex.StackTrace);
                                 }
                             }
                         }
@@ -4070,7 +4132,7 @@ namespace DslExpression
                                 ret = CalculatorValue.FromObject(t.InvokeMember(method, flags, null, null, _args));
                             }
                             catch (Exception ex) {
-                                Debug.LogWarningFormat("Exception:{0}\n{1}", ex.Message, ex.StackTrace);
+                                Calculator.Log("Exception:{0}\n{1}", ex.Message, ex.StackTrace);
                             }
                         }
                         else {
@@ -4082,7 +4144,7 @@ namespace DslExpression
                                     ret = CalculatorValue.FromObject(t.InvokeMember(method, flags, null, obj, _args));
                                 }
                                 catch (Exception ex) {
-                                    Debug.LogWarningFormat("Exception:{0}\n{1}", ex.Message, ex.StackTrace);
+                                    Calculator.Log("Exception:{0}\n{1}", ex.Message, ex.StackTrace);
                                 }
                             }
                         }
@@ -4350,7 +4412,7 @@ namespace DslExpression
             return r;
         }
     }
-    internal class GetDependenciesExp : DslExpression.SimpleExpressionBase
+    internal class GetDependenciesExp : SimpleExpressionBase
     {
         protected override CalculatorValue OnCalc(IList<CalculatorValue> operands)
         {
@@ -7137,14 +7199,14 @@ namespace DslExpression
                     }
                 }
                 catch (Exception ex) {
-                    Debug.LogFormat("input {0} failed:{1}", v, ex.Message);
+                    Calculator.Log("input {0} failed:{1}", v, ex.Message);
                 }
             }
             bool redirectToConsole = false;
             StringBuilder outputBuilder = null;
             StringBuilder errorBuilder = null;
-            object output = null;
-            object error = null;
+            var output = CalculatorValue.NullObject;
+            var error = CalculatorValue.NullObject;
             if (null != cfg.m_Output) {
                 var v = cfg.m_Output.Calc();
                 var str = v.AsString;
@@ -7176,9 +7238,9 @@ namespace DslExpression
             int exitCode = DslCalculator.NewProcess(noWait, fileName, args, option, istream, ostream, input, outputBuilder, errorBuilder, redirectToConsole, encoding);
             Debug.LogFormat("new process:{0} {1}, exit code:{2}", fileName, args, exitCode);
 
-            if (null != outputBuilder && null != output) {
+            if (null != outputBuilder && !output.IsNullObject) {
                 try {
-                    var file = output as string;
+                    var file = output.AsString;
                     if (!string.IsNullOrEmpty(file)) {
                         if (file[0] == '@' || file[0] == '$') {
                             Calculator.SetVariable(file, outputBuilder.ToString());
@@ -7188,17 +7250,17 @@ namespace DslExpression
                         }
                     }
                     else {
-                        int v = (int)Convert.ChangeType(output, typeof(int));
+                        int v = output.Get<int>();
                         Calculator.SetVariable(v, outputBuilder.ToString());
                     }
                 }
                 catch (Exception ex) {
-                    Debug.LogFormat("output {0} failed:{1}", output, ex.Message);
+                    Calculator.Log("output {0} failed:{1}", output, ex.Message);
                 }
             }
-            if (null != errorBuilder && null != error) {
+            if (null != errorBuilder && !error.IsNullObject) {
                 try {
-                    var file = error as string;
+                    var file = error.AsString;
                     if (!string.IsNullOrEmpty(file)) {
                         if (file[0] == '@' || file[0] == '$') {
                             Calculator.SetVariable(file, errorBuilder.ToString());
@@ -7208,12 +7270,12 @@ namespace DslExpression
                         }
                     }
                     else {
-                        int v = (int)Convert.ChangeType(error, typeof(int));
+                        int v = error.Get<int>();
                         Calculator.SetVariable(v, errorBuilder.ToString());
                     }
                 }
                 catch (Exception ex) {
-                    Debug.LogFormat("error {0} failed:{1}", error, ex.Message);
+                    Calculator.Log("error {0} failed:{1}", error, ex.Message);
                 }
             }
             return exitCode;
@@ -7321,14 +7383,14 @@ namespace DslExpression
                         }
                     }
                     catch (Exception ex) {
-                        Debug.LogFormat("input {0} failed:{1}", v, ex.Message);
+                        Calculator.Log("input {0} failed:{1}", v, ex.Message);
                     }
                 }
                 bool redirectToConsole = false;
                 StringBuilder outputBuilder = null;
                 StringBuilder errorBuilder = null;
-                object output = null;
-                object error = null;
+                var output = CalculatorValue.NullObject;
+                var error = CalculatorValue.NullObject;
                 if (null != cfg.m_Output) {
                     var v = cfg.m_Output.Calc();
                     var str = v.AsString;
@@ -7376,9 +7438,9 @@ namespace DslExpression
                     exitCode = DslCalculator.NewProcess(noWait, fileName, args, option, istream, ostream, input, outputBuilder, errorBuilder, redirectToConsole, encoding);
                     Debug.LogFormat("new process:{0} {1}, exit code:{2}", fileName, args, exitCode);
 
-                    if (null != outputBuilder && null != output) {
+                    if (null != outputBuilder && !output.IsNullObject) {
                         try {
-                            var file = output as string;
+                            var file = output.AsString;
                             if (!string.IsNullOrEmpty(file)) {
                                 if (file[0] == '@' || file[0] == '$') {
                                     Calculator.SetVariable(file, outputBuilder.ToString());
@@ -7388,17 +7450,17 @@ namespace DslExpression
                                 }
                             }
                             else {
-                                int v = (int)Convert.ChangeType(output, typeof(int));
+                                int v = output.Get<int>();
                                 Calculator.SetVariable(v, outputBuilder.ToString());
                             }
                         }
                         catch (Exception ex) {
-                            Debug.LogFormat("output {0} failed:{1}", output, ex.Message);
+                            Calculator.Log("output {0} failed:{1}", output, ex.Message);
                         }
                     }
-                    if (null != errorBuilder && null != error) {
+                    if (null != errorBuilder && !error.IsNullObject) {
                         try {
-                            var file = error as string;
+                            var file = error.AsString;
                             if (!string.IsNullOrEmpty(file)) {
                                 if (file[0] == '@' || file[0] == '$') {
                                     Calculator.SetVariable(file, errorBuilder.ToString());
@@ -7408,12 +7470,12 @@ namespace DslExpression
                                 }
                             }
                             else {
-                                int v = (int)Convert.ChangeType(error, typeof(int));
+                                int v = error.Get<int>();
                                 Calculator.SetVariable(v, errorBuilder.ToString());
                             }
                         }
                         catch (Exception ex) {
-                            Debug.LogFormat("error {0} failed:{1}", error, ex.Message);
+                            Calculator.Log("error {0} failed:{1}", error, ex.Message);
                         }
                     }
                 }
@@ -7674,7 +7736,7 @@ namespace DslExpression
             }
             return ret;
 #else
-            return null;
+            return CalculatorValue.NullObject;
 #endif
         }
     }
@@ -7694,7 +7756,7 @@ namespace DslExpression
             }
             return ret;
 #else
-            return null;
+            return CalculatorValue.NullObject;
 #endif
         }
     }
@@ -7720,7 +7782,7 @@ namespace DslExpression
             }
             return ret;
 #else
-            return null;
+            return CalculatorValue.NullObject;
 #endif
         }
     }
@@ -7741,7 +7803,7 @@ namespace DslExpression
             }
             return ret;
 #else
-            return null;
+            return CalculatorValue.NullObject;
 #endif
         }
     }
@@ -7771,7 +7833,7 @@ namespace DslExpression
             }
             return ret;
 #else
-            return null;
+            return CalculatorValue.NullObject;
 #endif
         }
     }
@@ -7791,7 +7853,7 @@ namespace DslExpression
             }
             return ret;
 #else
-            return null;
+            return CalculatorValue.NullObject;
 #endif
         }
     }
@@ -7871,9 +7933,7 @@ namespace DslExpression
                 if (operands.Count >= 2) {
                     var val = operands[1];
                     if (!string.IsNullOrEmpty(name)) {
-                        string valStr = null;
-                        if (null != val)
-                            valStr = val.ToString();
+                        string valStr = val.AsString;
                         GameFramework.GmCommands.GlobalDebugValues.SetValue(name, valStr);
                         ret = valStr;
                     }
@@ -7888,7 +7948,7 @@ namespace DslExpression
     {
         protected override CalculatorValue OnCalc(IList<CalculatorValue> operands)
         {
-            object ret = null;
+            var ret = CalculatorValue.NullObject;
             if (operands.Count >= 1) {
                 string name = operands[0].AsString;
                 if (operands.Count >= 2) {
@@ -7900,7 +7960,7 @@ namespace DslExpression
                             CsLibrary.GmCommands.ClientGmStorySystem.Instance.LoadStoryText(Encoding.UTF8.GetBytes(txt));
                             instance = CsLibrary.GmCommands.ClientGmStorySystem.Instance.GetStory("main");
                         }
-                        instance.SetVariable(name, val);
+                        instance.SetVariable(name, BoxedValue.FromObject(val.GetObject()));
                         ret = val;
                     }
                 }
@@ -7911,7 +7971,9 @@ namespace DslExpression
                         CsLibrary.GmCommands.ClientGmStorySystem.Instance.LoadStoryText(Encoding.UTF8.GetBytes(txt));
                         instance = CsLibrary.GmCommands.ClientGmStorySystem.Instance.GetStory("main");
                     }
-                    instance.TryGetVariable(name, out ret);
+                    BoxedValue bv;
+                    instance.TryGetVariable(name, out bv);
+                    ret = CalculatorValue.FromObject(bv.GetObject());
                 }
             }
             return ret;
@@ -7921,8 +7983,7 @@ namespace DslExpression
     {
         protected override CalculatorValue DoCalc()
         {
-            object ret = null;
-            var instance = GameFramework.GmCommands.ClientGmStorySystem.Instance.GetStory("main");
+            var instance = CsLibrary.GmCommands.ClientGmStorySystem.Instance.GetStory("main");
             if (null == instance) {
                 string txt = "script(main){onmessage(\"start\"){};};";
                 GameFramework.GmCommands.ClientGmStorySystem.Instance.LoadStoryText(Encoding.UTF8.GetBytes(txt));
@@ -7930,15 +7991,16 @@ namespace DslExpression
                 instance = GameFramework.GmCommands.ClientGmStorySystem.Instance.GetStory("main");
             }
             var handler = instance.GetMessageHandler("start");
+            object ret = null;
             foreach (var exp in m_Values) {
-                exp.Evaluate(instance, handler, null, null);
+                exp.Evaluate(instance, handler, BoxedValue.NullObject, null);
                 if (exp.HaveValue) {
-                    ret = exp.Value;
+                    ret = exp.Value.GetObject();
                 }
             }
-            return ret;
+            return CalculatorValue.FromObject(ret);
         }
-        protected override bool Load(Dsl.CallData callData)
+        protected override bool Load(Dsl.FunctionData callData)
         {
             int num = callData.GetParamNum();
             for (int ix = 0; ix < num; ++ix) {
@@ -7966,11 +8028,11 @@ namespace DslExpression
                 cmd.Reset();
             }
             foreach (var cmd in m_Commands) {
-                cmd.Execute(instance, handler, 0, null, null);
+                cmd.Execute(instance, handler, 0, BoxedValue.NullObject, null);
             }
-            return null;
+            return CalculatorValue.NullObject;
         }
-        protected override bool Load(Dsl.CallData callData)
+        protected override bool Load(Dsl.FunctionData callData)
         {
             int num = callData.GetParamNum();
             for (int ix = 0; ix < num; ++ix) {
@@ -7994,6 +8056,7 @@ namespace DslExpression
     }
     public sealed class DslCalculator
     {
+        public Dsl.DslLogDelegation OnLog;
         public IDictionary<string, CalculatorValue> NamedGlobalVariables
         {
             get { return m_NamedGlobalVariables; }
@@ -8290,7 +8353,7 @@ namespace DslExpression
         {
             Dsl.DslFile file = new Dsl.DslFile();
             string path = dslFile;
-            if (file.Load(path, (string s) => { Debug.LogError(s); })) {
+            if (file.Load(path, OnLog)) {
                 foreach (Dsl.ISyntaxComponent info in file.DslInfos) {
                     LoadDsl(info);
                 }
@@ -8457,30 +8520,30 @@ namespace DslExpression
                             }
                         }
                         catch (DirectoryNotFoundException ex5) {
-                            Debug.LogErrorFormat("calc:[{0}] exception:{1}\n{2}", exp.ToString(), ex5.Message, ex5.StackTrace);
+                            Log("calc:[{0}] exception:{1}\n{2}", exp.ToString(), ex5.Message, ex5.StackTrace);
                             OutputInnerException(ex5);
                         }
                         catch (FileNotFoundException ex4) {
-                            Debug.LogErrorFormat("calc:[{0}] exception:{1}\n{2}", exp.ToString(), ex4.Message, ex4.StackTrace);
+                            Log("calc:[{0}] exception:{1}\n{2}", exp.ToString(), ex4.Message, ex4.StackTrace);
                             OutputInnerException(ex4);
                         }
                         catch (IOException ex3) {
-                            Debug.LogErrorFormat("calc:[{0}] exception:{1}\n{2}", exp.ToString(), ex3.Message, ex3.StackTrace);
+                            Log("calc:[{0}] exception:{1}\n{2}", exp.ToString(), ex3.Message, ex3.StackTrace);
                             OutputInnerException(ex3);
                             ret = -1;
                         }
                         catch (UnauthorizedAccessException ex2) {
-                            Debug.LogErrorFormat("calc:[{0}] exception:{1}\n{2}", exp.ToString(), ex2.Message, ex2.StackTrace);
+                            Log("calc:[{0}] exception:{1}\n{2}", exp.ToString(), ex2.Message, ex2.StackTrace);
                             OutputInnerException(ex2);
                             ret = -1;
                         }
                         catch (NotSupportedException ex1) {
-                            Debug.LogErrorFormat("calc:[{0}] exception:{1}\n{2}", exp.ToString(), ex1.Message, ex1.StackTrace);
+                            Log("calc:[{0}] exception:{1}\n{2}", exp.ToString(), ex1.Message, ex1.StackTrace);
                             OutputInnerException(ex1);
                             ret = -1;
                         }
                         catch (Exception ex) {
-                            Debug.LogErrorFormat("calc:[{0}] exception:{1}\n{2}", exp.ToString(), ex.Message, ex.StackTrace);
+                            Log("calc:[{0}] exception:{1}\n{2}", exp.ToString(), ex.Message, ex.StackTrace);
                             OutputInnerException(ex);
                             ret = -1;
                             break;
@@ -8498,32 +8561,44 @@ namespace DslExpression
             get { return m_RunState; }
             internal set { m_RunState = value; }
         }
-        internal IList<CalculatorValue> Arguments
+        public void Log(string fmt, params object[] args)
+        {
+            if (null != OnLog) {
+                OnLog(string.Format(fmt, args));
+            }
+        }
+        public void Log(object arg)
+        {
+            if (null != OnLog) {
+                OnLog(string.Format("{0}", arg));
+            }
+        }
+        public IList<CalculatorValue> Arguments
         {
             get {
                 var stackInfo = m_Stack.Peek();
                 return stackInfo.Args;
             }
         }
-        internal bool TryGetVariable(int v, out CalculatorValue result)
+        public bool TryGetVariable(int v, out CalculatorValue result)
         {
             return Variables.TryGetValue(v, out result);
         }
-        internal CalculatorValue GetVariable(int v)
+        public CalculatorValue GetVariable(int v)
         {
             CalculatorValue result;
             Variables.TryGetValue(v, out result);
             return result;
         }
-        internal void SetVariable(int v, CalculatorValue val)
+        public void SetVariable(int v, CalculatorValue val)
         {
             Variables[v] = val;
         }
-        internal bool RemoveVariable(int v)
+        public bool RemoveVariable(int v)
         {
             return Variables.Remove(v);
         }
-        internal bool TryGetVariable(string v, out CalculatorValue result)
+        public bool TryGetVariable(string v, out CalculatorValue result)
         {
             bool ret = false;
             if (v.Length > 0) {
@@ -8542,7 +8617,7 @@ namespace DslExpression
             }
             return ret;
         }
-        internal CalculatorValue GetVariable(string v)
+        public CalculatorValue GetVariable(string v)
         {
             CalculatorValue result = CalculatorValue.NullObject;
             if (v.Length > 0) {
@@ -8558,7 +8633,7 @@ namespace DslExpression
             }
             return result;
         }
-        internal void SetVariable(string v, CalculatorValue val)
+        public void SetVariable(string v, CalculatorValue val)
         {
             if (v.Length > 0) {
                 if (v[0] == '@') {
@@ -8572,7 +8647,7 @@ namespace DslExpression
                 }
             }
         }
-        internal bool RemoveVariable(string v)
+        public bool RemoveVariable(string v)
         {
             bool ret = false;
             if (v.Length > 0) {
@@ -8588,7 +8663,7 @@ namespace DslExpression
             }
             return ret;
         }
-        internal IExpression Load(Dsl.ISyntaxComponent comp)
+        public IExpression Load(Dsl.ISyntaxComponent comp)
         {
             Dsl.ValueData valueData = comp as Dsl.ValueData;
             if (null != valueData) {
@@ -8603,7 +8678,7 @@ namespace DslExpression
                         fd.SetParamClass((int)Dsl.FunctionData.ParamClassEnum.PARAM_CLASS_PARENTHESIS);
                         if (!p.Load(fd, this)) {
                             //error
-                            Debug.LogWarningFormat("DslCalculator error, {0} line {1}", comp.ToScriptString(false), comp.GetLine());
+                            Log("DslCalculator error, {0} line {1}", comp.ToScriptString(false), comp.GetLine());
                         }
                         return p;
                     }
@@ -8701,7 +8776,7 @@ namespace DslExpression
                                 }
                                 else {
                                     //error
-                                    Debug.LogWarningFormat("DslCalculator error, {0} line {1}", callData.ToScriptString(false), callData.GetLine());
+                                    Log("DslCalculator error, {0} line {1}", callData.ToScriptString(false), callData.GetLine());
                                 }
                                 return exp;
                             }
@@ -8817,19 +8892,19 @@ namespace DslExpression
                         }
                         if (!ret.Load(fd, this)) {
                             //error
-                            Debug.LogWarningFormat("DslCalculator error, {0} line {1}", comp.ToScriptString(false), comp.GetLine());
+                            Log("DslCalculator error, {0} line {1}", comp.ToScriptString(false), comp.GetLine());
                         }
                         return ret;
                     }
                 }
                 if (!ret.Load(comp, this)) {
                     //error
-                    Debug.LogErrorFormat("DslCalculator error, {0} line {1}", comp.ToScriptString(false), comp.GetLine());
+                    Log("DslCalculator error, {0} line {1}", comp.ToScriptString(false), comp.GetLine());
                 }
             }
             else {
                 //error
-                Debug.LogErrorFormat("DslCalculator error, {0} line {1}", comp.ToScriptString(false), comp.GetLine());
+                Log("DslCalculator error, {0} line {1}", comp.ToScriptString(false), comp.GetLine());
             }
             return ret;
         }
@@ -8860,7 +8935,7 @@ namespace DslExpression
         {
             while (null != ex.InnerException) {
                 ex = ex.InnerException;
-                Debug.LogErrorFormat("\t=> exception:{0} stack:{1}", ex.Message, ex.StackTrace);
+                Log("\t=> exception:{0} stack:{1}", ex.Message, ex.StackTrace);
             }
         }
 
@@ -9013,10 +9088,10 @@ namespace DslExpression
                 }
             }
             catch (Exception ex) {
-                Debug.LogFormat("process({0} {1}) exception:{2} stack:{3}", fileName, args, ex.Message, ex.StackTrace);
+                Debug.LogErrorFormat("process({0} {1}) exception:{2} stack:{3}", fileName, args, ex.Message, ex.StackTrace);
                 while (null != ex.InnerException) {
                     ex = ex.InnerException;
-                    Debug.LogFormat("\t=> exception:{0} stack:{1}", ex.Message, ex.StackTrace);
+                    Debug.LogErrorFormat("\t=> exception:{0} stack:{1}", ex.Message, ex.StackTrace);
                 }
                 return -1;
             }
@@ -9037,7 +9112,7 @@ namespace DslExpression
                     output.Append(txt);
                 }
                 if (redirectToConsole) {
-                    Console.Write(txt);
+                    Debug.LogFormat("{0}", txt);
                 }
             }
         }
@@ -9057,7 +9132,7 @@ namespace DslExpression
                     error.Append(txt);
                 }
                 if (redirectToConsole) {
-                    Console.Write(txt);
+                    Debug.LogFormat("{0}", txt);
                 }
             }
         }
